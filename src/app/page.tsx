@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
+import { ChevronDown } from 'lucide-react';
 
 // ── Types & Constants ─────────────────────────────────────────────────────────
 import { AllData }                  from '@/types'
@@ -34,6 +35,8 @@ export default function Dashboard() {
     const [selGrades,    setSelGrades]    = useState<string[]>(['03'])
     const [viewMode,     setViewMode]     = useState<'all' | 'gender'>('all')
     const [selDistricts, setSelDistricts] = useState<string[]>([])
+    const [isOpen, setIsOpen] = useState(false);
+    const subjects = ["Mathematics", "English Language Arts"];
 
     // ── Load data once ─────────────────────────────────────────────────────
     useEffect(() => {
@@ -80,7 +83,7 @@ export default function Dashboard() {
         : selGrades.map(g => `Grade ${parseInt(g)}`).join(', ')
 
     return (
-        <div className="min-h-screen bg-[#f4f6f9]">
+        <div className="min-h-screen bg-[#f4f69]">
             {/* ── Header ───────────────────────────────────────────────── */}
             <header className="bg-[#1a3353] shadow-lg">
                 <div className="mx-auto max-w-screen-2xl px-12 py-4
@@ -123,30 +126,59 @@ export default function Dashboard() {
                     <div className="flex flex-wrap gap-5 items-end">
 
                         {/* Subject */}
-                        <div className="min-w-[190px]">
-                            <p className="text-[11px] font-semibold
-                                          text-gray-400 uppercase
-                                          tracking-widest mb-2">
+                        <div className="relative min-w-[240px]">
+                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
                                 Subject
                             </p>
-                            <select
-                                value={subject}
-                                onChange={e => setSubject(e.target.value)}
-                                className="w-full h-11 px-4 bg-white
-                                           border-2 border-green-400
-                                           rounded-xl text-sm font-medium
-                                           text-gray-700 hover:bg-gray-50
-                                           focus:outline-none focus:ring-2
-                                           focus:ring-green-300 transition
-                                           shadow-sm cursor-pointer"
+
+                            {/* Trigger Button */}
+                            <button
+                                type="button"
+                                onClick={() => setIsOpen(!isOpen)}
+                                className="w-full h-11 flex items-center justify-between px-4 bg-white 
+                                        border-[3px] border-[#15315E] rounded-xl text-sm font-semibold 
+                                        text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
                             >
-                                <option value="Mathematics">
-                                    Mathematics
-                                </option>
-                                <option value="English Language Arts">
-                                    English Language Arts
-                                </option>
-                            </select>
+                                <span>{subject}</span>
+                                <ChevronDown className={`w-4 h-4 text-[#15315E] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {/* Dropdown Menu */}
+                            {isOpen && (
+                                <>
+                                    {/* Invisible backdrop to close dropdown when clicking outside */}
+                                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+                                    
+                                    <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 
+                                                    rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-150">
+                                        
+                                        {/* Options List */}
+                                        <div className="max-h-60 overflow-y-auto py-1">
+                                            {subjects.map((opt) => (
+                                                <button
+                                                    key={opt}
+                                                    onClick={() => {
+                                                        setSubject(opt);
+                                                        setIsOpen(false);
+                                                    }}
+                                                    className={`w-full px-4 py-3 text-left text-sm transition-colors
+                                                        ${subject === opt 
+                                                            ? 'bg-blue-50 text-[#15315E] font-bold' 
+                                                            : 'text-gray-600 hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        {opt}
+                                                        {subject === opt && (
+                                                            <div className="w-2 h-2 rounded-full bg-[#15315E]" />
+                                                        )}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {/* Grade multi-select */}
@@ -157,7 +189,7 @@ export default function Dashboard() {
                                 selected={selGrades}
                                 onChange={setSelGrades}
                                 placeholder="Select grades..."
-                                accentColor="#3b82f6"
+                                accentColor="#0f2448"
                             />
                         </div>
 
@@ -168,27 +200,27 @@ export default function Dashboard() {
                                           tracking-widest mb-2">
                                 Student Group
                             </p>
-                            <div className="flex h-11 rounded-xl overflow-hidden
-                                            border-2 border-orange-400 shadow-sm">
+                            <div className="flex h-11 rounded-xl overflow-hidden border-[3px] 
+                            border-navy-blue shadow-[0_4px_14px_0_rgba(0,51,102,0.15)]">
                                 <button
                                     onClick={() => setViewMode('all')}
-                                    className={`flex-1 text-sm font-semibold
+                                    className={`flex-1 text-xs font-semibold
                                                transition-all px-3 ${
                                         viewMode === 'all'
-                                            ? 'bg-orange-500 text-white'
-                                            : 'bg-white text-gray-600 hover:bg-orange-50'
+                                            ? 'bg-gradient-to-b from-[#004080] to-[#003366] shadow-inner text-white'
+                                            : 'bg-white text-gray-600 hover:bg-slate-50'
                                     }`}
                                 >
                                     All Students
                                 </button>
-                                <div className="w-px bg-orange-300" />
+                                <div className="w-px bg-blue-300" />
                                 <button
                                     onClick={() => setViewMode('gender')}
-                                    className={`flex-1 text-sm font-semibold
+                                    className={`flex-1 text-xs font-semibold
                                                transition-all px-3 ${
                                         viewMode === 'gender'
-                                            ? 'bg-orange-500 text-white'
-                                            : 'bg-white text-gray-600 hover:bg-orange-50'
+                                            ? 'bg-gradient-to-b from-[#004080] to-[#003366] shadow-inner text-white'
+                                            : 'bg-white text-gray-600 hover:bg-slate-50'
                                     }`}
                                 >
                                     By Gender
@@ -204,7 +236,7 @@ export default function Dashboard() {
                                 selected={selDistricts}
                                 onChange={setSelDistricts}
                                 placeholder="Select districts"
-                                accentColor="#8b5cf6"
+                                accentColor="#0f2448"
                             />
                         </div>
 
@@ -213,7 +245,7 @@ export default function Dashboard() {
                             <button
                                 onClick={() => setSelDistricts([])}
                                 className="h-11 px-4 text-sm text-gray-500
-                                           hover:text-red-500 border-2
+                                           hover:text-red-500 border-[3px]
                                            border-gray-200 hover:border-red-300
                                            rounded-xl transition-all font-medium
                                            self-end"
