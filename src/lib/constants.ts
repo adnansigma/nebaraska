@@ -16,9 +16,19 @@ export const TICK_TEXTS = [
 ]
  
 export const COLORS = [
-    '#2563eb','#dc2626','#16a34a','#d97706','#7c3aed',
-    '#0891b2','#be185d','#065f46','#92400e','#1e40af',
-    '#b91c1c','#15803d','#b45309','#6d28d9','#0e7490',
-    '#9d174d','#064e3b','#78350f','#3730a3','#7f1d1d',
-    '#1d4ed8','#b45309','#047857','#c2410c','#6d28d9',
-]
+    '#2563EB', // Royal Blue (Primary District)
+    '#10B981', // Emerald Green (Growth/Positive)
+    '#8B5CF6', // Modern Violet
+    '#F59E0B', // Amber (High Visibility)
+    '#06B6D4', // Cyan/Teal
+    '#EC4899', // Pink/Magenta
+    '#3B82F6', // Sky Blue
+    '#059669', // Dark Emerald
+    '#7C3AED', // Deep Purple
+    '#D97706', // Burnt Orange
+    '#0891B2', // Ocean Blue
+    '#DB2777', // Deep Pink
+    '#4F46E5', // Indigo
+    '#16A34A', // Success Green
+    '#6366F1', // Periwinkle
+];
