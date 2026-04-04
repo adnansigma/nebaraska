@@ -1,25 +1,27 @@
 'use client'
 import { useState, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic'
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react'
 
 // ── Types & Constants ─────────────────────────────────────────────────────────
-import { AllData }                  from '@/types'
+import { AllData }                       from '@/types'
 import { GRADES, TICK_VALS, TICK_TEXTS } from '@/lib/constants'
 
 // ── Services & Logic ──────────────────────────────────────────────────────────
-import { fetchDashboardData }       from '@/services/scoreService'
-import { buildTraces }              from '@/lib/traceBuilder'
+import { fetchDashboardData }            from '@/services/scoreService'
+import { buildTraces }                   from '@/lib/traceBuilder'
 
 // ── UI Components ─────────────────────────────────────────────────────────────
-import { MultiSelect }              from '@/components/MultiSelect'
-import { LineStyleLegend }          from '@/components/LineStyleLegend'
-import { ChartSkeleton }            from '@/components/ChartSkeleton'
+import { MultiSelect }                   from '@/components/MultiSelect'
+import { LineStyleLegend }               from '@/components/LineStyleLegend'
+import { ChartSkeleton }                 from '@/components/ChartSkeleton'
 
 const Plot = dynamic(
     () => import('react-plotly.js').then(mod => mod.default),
     { ssr: false, loading: () => <ChartSkeleton /> }
 )
+
+const SUBJECTS = ['Mathematics', 'English Language Arts']
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
@@ -35,8 +37,8 @@ export default function Dashboard() {
     const [selGrades,    setSelGrades]    = useState<string[]>(['03'])
     const [viewMode,     setViewMode]     = useState<'all' | 'gender'>('all')
     const [selDistricts, setSelDistricts] = useState<string[]>([])
-    const [isOpen, setIsOpen] = useState(false);
-    const subjects = ["Mathematics", "English Language Arts"];
+    const [showState,    setShowState]    = useState(true)
+    const [subjectOpen,  setSubjectOpen]  = useState(false)
 
     // ── Load data once ─────────────────────────────────────────────────────
     useEffect(() => {
@@ -64,10 +66,11 @@ export default function Dashboard() {
             (viewMode === 'all'
                 ? row.subgroup_type === 'ALL'
                 : row.subgroup_type === 'GENDER') &&
-            (row.level === 'ST' ||
-                selDistricts.includes(row.agency_name))
+            (row.level === 'ST'
+                ? showState
+                : selDistricts.includes(row.agency_name))
         )
-    }, [allData, subject, selGrades, viewMode, selDistricts])
+    }, [allData, subject, selGrades, viewMode, selDistricts, showState])
 
     // ── Build Plotly traces ────────────────────────────────────────────────
     const traces = useMemo(() =>
@@ -83,7 +86,8 @@ export default function Dashboard() {
         : selGrades.map(g => `Grade ${parseInt(g)}`).join(', ')
 
     return (
-        <div className="min-h-screen bg-[#f4f69]">
+        <div className="min-h-screen bg-[#f4f6f9]">
+
             {/* ── Header ───────────────────────────────────────────────── */}
             <header className="bg-[#1a3353] shadow-lg">
                 <div className="mx-auto max-w-screen-2xl px-12 py-4
@@ -92,15 +96,15 @@ export default function Dashboard() {
                                     flex items-center justify-center
                                     border border-white/20 flex-shrink-0">
                         <img src="/nde-logo.webp" alt="NDE Logo"
-                            className="w-22 h-22 object-contain" />
+                             className="w-22 h-22 object-contain" />
                     </div>
                     <div>
                         <h1 className="text-white font-bold text-3xl
-                                    tracking-wide leading-none">
+                                       tracking-wide leading-none">
                             Nebraska Department of Education
                         </h1>
                         <p className="text-blue-200 text-sm mt-0.5
-                                    font-medium tracking-widest uppercase">
+                                      font-medium tracking-widest uppercase">
                             Assessment Data Dashboard
                         </p>
                     </div>
@@ -125,47 +129,50 @@ export default function Dashboard() {
                                 border border-gray-100 p-6 mb-5">
                     <div className="flex flex-wrap gap-5 items-end">
 
-                        {/* Subject */}
+                        {/* ── Subject ───────────────────────────────────── */}
                         <div className="relative min-w-[240px]">
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                            <p className="text-[11px] font-semibold text-gray-400
+                                          uppercase tracking-widest mb-2">
                                 Subject
                             </p>
-
-                            {/* Trigger Button */}
                             <button
                                 type="button"
-                                onClick={() => setIsOpen(!isOpen)}
-                                className="w-full h-11 flex items-center justify-between px-4 bg-white 
-                                        border-[3px] border-[#15315E] rounded-xl text-sm font-semibold 
-                                        text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
+                                onClick={() => setSubjectOpen(o => !o)}
+                                className="w-full h-11 flex items-center justify-between
+                                           px-4 bg-white border-[3px] border-[#15315E]
+                                           rounded-xl text-sm font-semibold text-gray-700
+                                           hover:bg-gray-50 transition-all shadow-sm"
                             >
                                 <span>{subject}</span>
-                                <ChevronDown className={`w-4 h-4 text-[#15315E] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                                <ChevronDown
+                                    className={`w-4 h-4 text-[#15315E] transition-transform
+                                                duration-200 ${subjectOpen ? 'rotate-180' : ''}`}
+                                />
                             </button>
 
-                            {/* Dropdown Menu */}
-                            {isOpen && (
+                            {subjectOpen && (
                                 <>
-                                    {/* Invisible backdrop to close dropdown when clicking outside */}
-                                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-                                    
-                                    <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 
-                                                    rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-150">
-                                        
-                                        {/* Options List */}
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setSubjectOpen(false)}
+                                    />
+                                    <div className="absolute z-50 mt-2 w-full bg-white
+                                                    border border-gray-200 rounded-xl
+                                                    shadow-2xl overflow-hidden">
                                         <div className="max-h-60 overflow-y-auto py-1">
-                                            {subjects.map((opt) => (
+                                            {SUBJECTS.map(opt => (
                                                 <button
                                                     key={opt}
                                                     onClick={() => {
-                                                        setSubject(opt);
-                                                        setIsOpen(false);
+                                                        setSubject(opt)
+                                                        setSubjectOpen(false)
                                                     }}
-                                                    className={`w-full px-4 py-3 text-left text-sm transition-colors
-                                                        ${subject === opt 
-                                                            ? 'bg-blue-50 text-[#15315E] font-bold' 
+                                                    className={`w-full px-4 py-3 text-left text-sm
+                                                                transition-colors ${
+                                                        subject === opt
+                                                            ? 'bg-blue-50 text-[#15315E] font-bold'
                                                             : 'text-gray-600 hover:bg-gray-50'
-                                                        }`}
+                                                    }`}
                                                 >
                                                     <div className="flex items-center justify-between">
                                                         {opt}
@@ -181,7 +188,7 @@ export default function Dashboard() {
                             )}
                         </div>
 
-                        {/* Grade multi-select */}
+                        {/* ── Grade ─────────────────────────────────────── */}
                         <div className="min-w-[160px]">
                             <MultiSelect
                                 label="Grade"
@@ -193,21 +200,20 @@ export default function Dashboard() {
                             />
                         </div>
 
-                        {/* View Mode toggle */}
+                        {/* ── Student Group ─────────────────────────────── */}
                         <div className="min-w-[200px]">
-                            <p className="text-[11px] font-semibold
-                                          text-gray-400 uppercase
-                                          tracking-widest mb-2">
+                            <p className="text-[11px] font-semibold text-gray-400
+                                          uppercase tracking-widest mb-2">
                                 Student Group
                             </p>
-                            <div className="flex h-11 rounded-xl overflow-hidden border-[3px] 
-                            border-navy-blue shadow-[0_4px_14px_0_rgba(0,51,102,0.15)]">
+                            <div className="flex h-11 rounded-xl overflow-hidden
+                                            border-[3px] border-[#15315E] shadow-sm">
                                 <button
                                     onClick={() => setViewMode('all')}
                                     className={`flex-1 text-xs font-semibold
                                                transition-all px-3 ${
                                         viewMode === 'all'
-                                            ? 'bg-gradient-to-b from-[#004080] to-[#003366] shadow-inner text-white'
+                                            ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white shadow-inner'
                                             : 'bg-white text-gray-600 hover:bg-slate-50'
                                     }`}
                                 >
@@ -219,7 +225,7 @@ export default function Dashboard() {
                                     className={`flex-1 text-xs font-semibold
                                                transition-all px-3 ${
                                         viewMode === 'gender'
-                                            ? 'bg-gradient-to-b from-[#004080] to-[#003366] shadow-inner text-white'
+                                            ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white shadow-inner'
                                             : 'bg-white text-gray-600 hover:bg-slate-50'
                                     }`}
                                 >
@@ -228,7 +234,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        {/* District multi-select */}
+                        {/* ── District ──────────────────────────────────── */}
                         <div className="flex-1 min-w-[200px] max-w-[320px]">
                             <MultiSelect
                                 label="District"
@@ -240,18 +246,42 @@ export default function Dashboard() {
                             />
                         </div>
 
-                        {/* Clear district button */}
-                        {selDistricts.length > 0 && (
+                        {/* ── State Line Toggle ─────────────────────────── */}
+                        <div className="self-end">
+                            <p className="text-[11px] font-semibold text-gray-400
+                                          uppercase tracking-widest mb-2">
+                                State Average
+                            </p>
                             <button
-                                onClick={() => setSelDistricts([])}
-                                className="h-11 px-4 text-sm text-gray-500
-                                           hover:text-red-500 border-[3px]
-                                           border-gray-200 hover:border-red-300
-                                           rounded-xl transition-all font-medium
-                                           self-end"
+                                onClick={() => setShowState(s => !s)}
+                                className={`h-11 px-5 text-sm font-semibold rounded-xl
+                                            border-[3px] transition-all shadow-sm
+                                            flex items-center gap-2 ${
+                                    showState
+                                        ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white border-[#15315E]'
+                                        : 'bg-white text-gray-600 border-[#15315E] hover:bg-gray-50'
+                                }`}
                             >
-                                Clear Districts
+                                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                                    showState ? 'bg-red-400' : 'bg-gray-300'
+                                }`} />
+                                {showState ? 'State: On' : 'State: Off'}
                             </button>
+                        </div>
+
+                        {/* ── Clear Districts ───────────────────────────── */}
+                        {selDistricts.length > 0 && (
+                            <div className="self-end">
+                                <button
+                                    onClick={() => setSelDistricts([])}
+                                    className="h-11 px-4 text-sm text-gray-500
+                                               hover:text-red-500 border-[3px]
+                                               border-gray-200 hover:border-red-300
+                                               rounded-xl transition-all font-medium"
+                                >
+                                    Clear Districts
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -262,11 +292,9 @@ export default function Dashboard() {
                     {/* Chart */}
                     <div className="flex-1 bg-white rounded-2xl shadow-sm
                                     border border-gray-100 p-6 min-w-0">
-                        {/* Chart header */}
                         <div className="flex items-center justify-between mb-4">
                             <div>
-                                <h3 className="text-base font-semibold
-                                               text-gray-800">
+                                <h3 className="text-base font-semibold text-gray-800">
                                     {subject} — {gradeLabel}
                                 </h3>
                                 <p className="text-xs text-gray-400 mt-0.5">
@@ -276,9 +304,8 @@ export default function Dashboard() {
                                 </p>
                             </div>
                             {!dataLoading && (
-                                <span className="text-xs font-semibold
-                                                 text-gray-400 bg-gray-100
-                                                 px-3 py-1.5 rounded-lg">
+                                <span className="text-xs font-semibold text-gray-400
+                                                 bg-gray-100 px-3 py-1.5 rounded-lg">
                                     {traces.length} lines
                                 </span>
                             )}
@@ -286,18 +313,17 @@ export default function Dashboard() {
 
                         {dataLoading ? <ChartSkeleton /> :
                          error ? (
-                            <div className="h-64 flex items-center
-                                            justify-center text-red-500
-                                            text-sm">
+                            <div className="h-64 flex items-center justify-center
+                                            text-red-500 text-sm">
                                 ⚠️ {error}
                             </div>
                          ) : traces.length === 0 ? (
-                            <div className="h-64 flex items-center
-                                            justify-center text-gray-400
-                                            text-sm">
+                            <div className="h-64 flex items-center justify-center
+                                            text-gray-400 text-sm">
                                 No data for current selection.
-                                {selGrades.length === 0 &&
-                                    ' Please select at least one grade.'}
+                                {selGrades.length === 0 && ' Please select at least one grade.'}
+                                {!showState && selDistricts.length === 0 &&
+                                    ' Turn on State line or select a district.'}
                             </div>
                          ) : (
                             <Plot
@@ -351,21 +377,16 @@ export default function Dashboard() {
                     <div className="w-52 flex-shrink-0">
                         <LineStyleLegend viewMode={viewMode} />
 
-                        {/* District colour legend */}
                         {selDistricts.length > 0 && (
-                            <div className="bg-white rounded-2xl border
-                                            border-gray-100 shadow-sm
-                                            p-5 mt-4">
-                                <p className="text-[11px] font-semibold
-                                              text-gray-400 uppercase
-                                              tracking-widest mb-3">
+                            <div className="bg-white rounded-2xl border border-gray-100
+                                            shadow-sm p-5 mt-4">
+                                <p className="text-[11px] font-semibold text-gray-400
+                                              uppercase tracking-widest mb-3">
                                     Selected Districts
                                 </p>
-                                <div className="space-y-2 max-h-80
-                                                overflow-y-auto">
+                                <div className="space-y-2 max-h-80 overflow-y-auto">
                                     {selDistricts.map(d => (
-                                        <div key={d}
-                                             className="flex items-center gap-2">
+                                        <div key={d} className="flex items-center gap-2">
                                             <div
                                                 className="w-3 h-3 rounded-full flex-shrink-0"
                                                 style={{ background: colorMap[d] || '#999' }}
