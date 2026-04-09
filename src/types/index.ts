@@ -1,5 +1,3 @@
-// ── Types ─────────────────────────────────────────────────────────────────────
- 
 export interface ScoreRow {
     agency_name    : string
     school_year    : string
@@ -9,8 +7,11 @@ export interface ScoreRow {
     subgroup_desc  : string
     grade          : string
     level          : string
+    county_id      : string | null
+    district_id    : string | null
+    district_name  : string | null  // only populated for level='SC'
 }
- 
+
 export interface AllData {
     math   : ScoreRow[]
     english: ScoreRow[]

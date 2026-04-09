@@ -8,16 +8,19 @@ interface Option {
 }
 
 interface MultiSelectProps {
-    label      : string
-    options    : Option[]
-    selected   : string[]
-    onChange   : (v: string[]) => void
-    placeholder: string
-    accentColor: string
+    label        : string
+    options      : Option[]
+    selected     : string[]
+    onChange     : (v: string[]) => void
+    placeholder  : string
+    accentColor  : string
+    singleSelect?: boolean
+    disabled?    : boolean
 }
 
 export function MultiSelect({
-    label, options, selected, onChange, placeholder, accentColor,
+    label, options, selected, onChange, placeholder,
+    accentColor, singleSelect = false, disabled = false,
 }: MultiSelectProps) {
     const [open, setOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
@@ -31,44 +34,50 @@ export function MultiSelect({
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
-    const toggle = (val: string) =>
-        onChange(selected.includes(val)
-            ? selected.filter(v => v !== val)
-            : [...selected, val])
+    const toggle = (val: string) => {
+        if (singleSelect) {
+            onChange(selected[0] === val ? [] : [val])
+            setOpen(false)
+        } else {
+            onChange(selected.includes(val)
+                ? selected.filter(v => v !== val)
+                : [...selected, val])
+        }
+    }
 
     const displayText =
-        selected.length === 0              ? placeholder :
-        selected.length === options.length ? `All ${label}s` :
-        selected.length === 1              ?
-            options.find(o => o.value === selected[0])?.label || '' :
-        `${selected.length} ${label}s Selected`
+        selected.length === 0                              ? placeholder :
+        !singleSelect && selected.length === options.length ? `All ${label}s` :
+        selected.length === 1
+            ? (options.find(o => o.value === selected[0])?.label ?? '')
+            : `${selected.length} ${label}s`
 
     return (
         <div className="relative w-full" ref={ref}>
-            {/* Label */}
             <p className="text-[11px] font-semibold text-gray-400
                           uppercase tracking-widest mb-2">
                 {label}
             </p>
 
-            {/* Trigger button */}
             <button
                 type="button"
-                onClick={() => setOpen(!open)}
-                className="w-full h-11 flex items-center justify-between
+                onClick={() => !disabled && setOpen(o => !o)}
+                disabled={disabled}
+                className={`w-full h-11 flex items-center justify-between
                            px-4 bg-white border-[3px] border-[#15315E]
                            rounded-xl text-sm font-semibold text-gray-700
-                           hover:bg-gray-50 focus:outline-none transition-all shadow-sm
-                           touch-manipulation"
+                           transition-all shadow-sm touch-manipulation
+                           ${disabled
+                               ? 'opacity-40 cursor-not-allowed'
+                               : 'hover:bg-gray-50 focus:outline-none'}`}
             >
-                <span className="truncate pr-2 text-left">{displayText}</span>
+                <span className="truncate pr-2 text-left text-sm">{displayText}</span>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                    {selected.length > 0 && selected.length < options.length && (
+                    {!singleSelect && selected.length > 0 && selected.length < options.length && (
                         <span
                             style={{ background: accentColor }}
                             className="text-white text-[10px] font-bold w-5 h-5
-                                       rounded-full flex items-center justify-center
-                                       shadow-sm"
+                                       rounded-full flex items-center justify-center shadow-sm"
                         >
                             {selected.length}
                         </span>
@@ -80,35 +89,36 @@ export function MultiSelect({
                 </div>
             </button>
 
-            {/* Dropdown */}
-            {open && (
+            {open && !disabled && (
                 <div className="absolute z-50 mt-2 w-full bg-white
                                 border border-gray-200 rounded-xl shadow-2xl
                                 overflow-hidden">
-                    {/* Select / Clear All */}
-                    <div className="flex border-b border-gray-100 bg-gray-50/50">
-                        <button
-                            type="button"
-                            onClick={() => onChange(options.map(o => o.value))}
-                            className="flex-1 py-3 text-[11px] font-bold text-blue-900
-                                       hover:bg-blue-50 transition-colors uppercase
-                                       tracking-tight touch-manipulation"
-                        >
-                            Select All
-                        </button>
-                        <div className="w-px bg-gray-200" />
-                        <button
-                            type="button"
-                            onClick={() => onChange([])}
-                            className="flex-1 py-3 text-[11px] font-bold text-gray-400
-                                       hover:bg-gray-100 transition-colors uppercase
-                                       tracking-tight touch-manipulation"
-                        >
-                            Clear All
-                        </button>
-                    </div>
 
-                    {/* Options list — taller touch targets on mobile */}
+                    {/* Select All / Clear All — only in multi mode */}
+                    {!singleSelect && (
+                        <div className="flex border-b border-gray-100 bg-gray-50/50">
+                            <button
+                                type="button"
+                                onClick={() => onChange(options.map(o => o.value))}
+                                className="flex-1 py-3 text-[11px] font-bold text-blue-900
+                                           hover:bg-blue-50 transition-colors uppercase
+                                           tracking-tight touch-manipulation"
+                            >
+                                Select All
+                            </button>
+                            <div className="w-px bg-gray-200" />
+                            <button
+                                type="button"
+                                onClick={() => onChange([])}
+                                className="flex-1 py-3 text-[11px] font-bold text-gray-400
+                                           hover:bg-gray-100 transition-colors uppercase
+                                           tracking-tight touch-manipulation"
+                            >
+                                Clear All
+                            </button>
+                        </div>
+                    )}
+
                     <div className="max-h-56 sm:max-h-60 overflow-y-auto">
                         {options.map(opt => {
                             const isSelected = selected.includes(opt.value)
@@ -122,20 +132,26 @@ export function MultiSelect({
                                                border-b border-gray-50 last:border-0
                                                touch-manipulation"
                                 >
+                                    {/* Radio style for single, checkbox for multi */}
                                     <div
                                         style={{
                                             borderColor: isSelected ? accentColor : '#d1d5db',
                                             background : isSelected ? accentColor : 'white',
                                         }}
-                                        className="w-4 h-4 rounded border-2 flex-shrink-0
-                                                   flex items-center justify-center
-                                                   transition-all"
+                                        className={`flex-shrink-0 flex items-center
+                                                    justify-center transition-all border-2
+                                                    ${singleSelect
+                                                        ? 'w-4 h-4 rounded-full'
+                                                        : 'w-4 h-4 rounded'}`}
                                     >
-                                        {isSelected && (
+                                        {isSelected && singleSelect && (
+                                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                        )}
+                                        {isSelected && !singleSelect && (
                                             <Check className="w-3 h-3 text-white stroke-[4]" />
                                         )}
                                     </div>
-                                    <span className={`text-xs sm:text-sm select-none ${
+                                    <span className={`text-xs sm:text-sm select-none truncate ${
                                         isSelected
                                             ? 'text-gray-900 font-semibold'
                                             : 'text-gray-600'

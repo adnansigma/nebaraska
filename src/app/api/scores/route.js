@@ -3,41 +3,60 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
     try {
-        // Load both subjects in parallel
         const [mathResult, engResult] = await Promise.all([
             pool.query(`
                 SELECT
-                    agency_name,
-                    school_year,
-                    avg_scale_score,
-                    count_tested,
-                    subgroup_type,
-                    subgroup_desc,
-                    grade,
-                    level
-                FROM math_scores
+                    s.agency_name,
+                    s.school_year,
+                    s.avg_scale_score,
+                    s.count_tested,
+                    s.subgroup_type,
+                    s.subgroup_desc,
+                    s.grade,
+                    s.level,
+                    s.county_id,
+                    s.district_id,
+                    d.agency_name AS district_name
+                FROM math_scores s
+                LEFT JOIN (
+                    SELECT DISTINCT county_id, district_id, agency_name
+                    FROM math_scores
+                    WHERE level = 'DI'
+                ) d ON s.county_id = d.county_id
+                    AND s.district_id = d.district_id
+                    AND s.level = 'SC'
                 WHERE
-                    level IN ('DI', 'ST') AND
-                    grade != 'ALL' AND
-                    subgroup_type IN ('ALL', 'GENDER')
-                ORDER BY agency_name, school_year, grade
+                    s.level IN ('DI', 'ST', 'SC') AND
+                    s.grade != 'ALL' AND
+                    s.subgroup_type IN ('ALL', 'GENDER')
+                ORDER BY s.agency_name, s.school_year, s.grade
             `),
             pool.query(`
                 SELECT
-                    agency_name,
-                    school_year,
-                    avg_scale_score,
-                    count_tested,
-                    subgroup_type,
-                    subgroup_desc,
-                    grade,
-                    level
-                FROM english_scores
+                    s.agency_name,
+                    s.school_year,
+                    s.avg_scale_score,
+                    s.count_tested,
+                    s.subgroup_type,
+                    s.subgroup_desc,
+                    s.grade,
+                    s.level,
+                    s.county_id,
+                    s.district_id,
+                    d.agency_name AS district_name
+                FROM english_scores s
+                LEFT JOIN (
+                    SELECT DISTINCT county_id, district_id, agency_name
+                    FROM english_scores
+                    WHERE level = 'DI'
+                ) d ON s.county_id = d.county_id
+                    AND s.district_id = d.district_id
+                    AND s.level = 'SC'
                 WHERE
-                    level IN ('DI', 'ST') AND
-                    grade != 'ALL' AND
-                    subgroup_type IN ('ALL', 'GENDER')
-                ORDER BY agency_name, school_year, grade
+                    s.level IN ('DI', 'ST', 'SC') AND
+                    s.grade != 'ALL' AND
+                    s.subgroup_type IN ('ALL', 'GENDER')
+                ORDER BY s.agency_name, s.school_year, s.grade
             `)
         ])
 
