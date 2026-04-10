@@ -190,14 +190,31 @@ export default function Dashboard() {
 
     // ── Reset schools when district changes ────────────────────────────────
     useEffect(() => {
-        setSelSchools([])
-    }, [selDistrict])
+        if (selDistrict.length === 0) {
+            setSelSchools([])
+            return
+        }
+        // Keep only schools that still belong to a selected district
+        const validSchools = new Set(
+            selDistrict.flatMap(d => schoolsByDistrict[d] ?? [])
+        )
+        setSelSchools(prev => prev.filter(s => validSchools.has(s)))
+    }, [selDistrict, schoolsByDistrict])
 
     // ── School options for the selected district ───────────────────────────
     const schoolOptions = useMemo(() => {
         if (selDistrict.length === 0) return []
-        return (schoolsByDistrict[selDistrict[0]] ?? [])
-            .map(s => ({ value: s, label: s }))
+        const seen = new Set()
+        const options = []
+        for (const dist of selDistrict) {
+            for (const school of (schoolsByDistrict[dist] ?? [])) {
+                if (!seen.has(school)) {
+                    seen.add(school)
+                    options.push({ value: school, label: school })
+                }
+            }
+        }
+        return options
     }, [selDistrict, schoolsByDistrict])
 
     // ── Filter data ────────────────────────────────────────────────────────
@@ -205,7 +222,6 @@ export default function Dashboard() {
         if (!allData) return []
         const source        = subject === 'Mathematics' ? allData.math : allData.english
         const subgroupFilter = viewMode === 'all' ? 'ALL' : 'GENDER'
-        const districtName  = selDistrict[0] ?? null
 
         return source.filter(row => {
             if (!selGrades.includes(row.grade))        return false
@@ -215,15 +231,13 @@ export default function Dashboard() {
 
             if (row.level === 'DI') {
                 return showDistrict
-                    && districtName !== null
-                    && row.agency_name === districtName
+                    && selDistrict.length > 0
+                    && selDistrict.includes(row.agency_name)
             }
 
             if (row.level === 'SC') {
-                // Must have a district selected, and this school must belong to it
-                if (!districtName)                         return false
-                if (row.district_name !== districtName)    return false
-                // Only show schools the user has selected
+                if (selDistrict.length === 0)              return false
+                if (!selDistrict.includes(row.district_name ?? '')) return false
                 return selSchools.includes(row.agency_name)
             }
 
@@ -304,7 +318,7 @@ export default function Dashboard() {
                                 border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-5">
                     <div className="grid grid-cols-2 gap-3
                                     sm:grid-cols-3 sm:gap-4
-                                    lg:flex lg:flex-wrap lg:gap-5 lg:items-end">
+                                    lg:flex lg:flex-wrap lg:gap-3 lg:items-end">
 
                         {/* Subject */}
                         <div className="relative col-span-2 sm:col-span-1
@@ -317,7 +331,7 @@ export default function Dashboard() {
                                 type="button"
                                 onClick={() => setSubjectOpen(o => !o)}
                                 className="w-full h-11 flex items-center justify-between
-                                           px-4 bg-white border-[3px] border-[#15315E]
+                                           px-2 bg-white border-[3px] border-[#15315E]
                                            rounded-xl text-sm font-semibold text-gray-700
                                            hover:bg-gray-50 transition-all shadow-sm"
                             >
@@ -363,13 +377,13 @@ export default function Dashboard() {
                         </div>
 
                         {/* Grade */}
-                        <div className="col-span-1 lg:min-w-[150px]">
+                        <div className="col-span-1 lg:min-w-[120px]">
                             <MultiSelect
                                 label="Grade"
                                 options={GRADES}
                                 selected={selGrades}
                                 onChange={setSelGrades}
-                                placeholder="Select grades..."
+                                placeholder="Select Grades"
                                 accentColor="#0f2448"
                             />
                         </div>
@@ -415,10 +429,9 @@ export default function Dashboard() {
                                 label="District"
                                 options={districtOptions}
                                 selected={selDistrict}
-                                onChange={v => setSelDistrict(v.length ? [v[v.length - 1]] : [])}
+                                onChange={v => setSelDistrict(v)}
                                 placeholder="Select a district"
                                 accentColor="#0f2448"
-                                singleSelect={true}
                             />
                         </div>
 
@@ -460,9 +473,9 @@ export default function Dashboard() {
                                         setSelDistrict([])
                                         setSelSchools([])
                                     }}
-                                    className="w-full lg:w-auto h-11 px-4 text-sm
+                                    className="w-full lg:w-auto h-11 px-3 text-sm
                                                text-gray-500 hover:text-red-500
-                                               border-[3px] border-gray-200
+                                               border-[2px] border-gray-200
                                                hover:border-red-300 rounded-xl
                                                transition-all font-medium"
                                 >
@@ -474,7 +487,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* ── Chart + Legend ────────────────────────────────────── */}
-                <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-start">
+                <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-start items-stretch">
 
                     {/* Chart */}
                     <div className="w-full lg:flex-1 bg-white rounded-2xl shadow-sm
@@ -568,63 +581,64 @@ export default function Dashboard() {
                         <div className="flex-1 lg:flex-none">
                             <LineStyleLegend viewMode={viewMode} />
                         </div>
-
-                        {selectedDistrictName && (
-                            <div className="flex-1 lg:flex-none bg-white rounded-2xl
+                        
+                        {selDistrict.length > 0 && (
+                            <div className="flex-1 lg:flex-1 bg-white rounded-2xl
                                             border border-gray-100 shadow-sm
                                             p-4 sm:p-5 lg:mt-4">
-                                <p className="text-[11px] font-semibold text-gray-400
-                                              uppercase tracking-widest mb-2">
-                                    District
-                                </p>
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div
-                                        className="w-3 h-3 rounded-full flex-shrink-0"
-                                        style={{ background: colorMap[selectedDistrictName] || '#999' }}
-                                    />
-                                    <span className="text-xs text-gray-700 font-medium
-                                                     leading-tight">
-                                        {selectedDistrictName}
+                                <p className="text-[10px] font-semibold text-gray-400
+                                            uppercase tracking-widest mb-3">
+                                    Selected Districts
+                                    <span className="ml-1.5 text-[10px] bg-gray-100
+                                                    text-gray-500 px-1.5 py-0.5 rounded-full
+                                                    normal-case font-bold tracking-normal">
+                                        {selDistrict.length}
                                     </span>
-                                </div>
-
-                                {selSchools.length > 0 && (
-                                    <>
-                                        <p className="text-[11px] font-semibold text-gray-400
-                                                      uppercase tracking-widest mb-2">
-                                            Schools
-                                            <span className="ml-1.5 text-[10px] bg-gray-100
-                                                             text-gray-500 px-1.5 py-0.5
-                                                             rounded-full normal-case
-                                                             font-bold tracking-normal">
-                                                {selSchools.length}
-                                            </span>
-                                        </p>
-                                        <div className="flex flex-col gap-2
-                                                        max-h-52 overflow-y-auto">
-                                            {selSchools.map(s => (
-                                                <div key={s}
-                                                     className="flex items-start gap-2">
+                                </p>
+                                <div className="flex flex-col gap-4 max-h-80 overflow-y-auto">
+                                    {selDistrict.map(dist => {
+                                        // Schools selected that belong to this district
+                                        const distSchools = (schoolsByDistrict[dist] ?? [])
+                                            .filter(s => selSchools.includes(s))
+                                        return (
+                                            <div key={dist}>
+                                                {/* District row */}
+                                                <div className="flex items-center gap-2 mb-1.5">
                                                     <div
-                                                        className="w-2.5 h-2.5 rounded-full
-                                                                   flex-shrink-0 mt-0.5"
-                                                        style={{ background: colorMap[s] || '#aaa' }}
+                                                        className="w-3 h-3 rounded-full flex-shrink-0"
+                                                        style={{ background: colorMap[dist] || '#999' }}
                                                     />
-                                                    <span className="text-xs text-gray-600
-                                                                     leading-tight">
-                                                        {s}
+                                                    <span className="text-xs text-gray-700
+                                                                    font-semibold truncate">
+                                                        {dist}
                                                     </span>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </>
-                                )}
-
-                                {selSchools.length === 0 && (
-                                    <p className="text-xs text-gray-400 italic">
-                                        No schools selected
-                                    </p>
-                                )}
+                                                {/* Schools under this district */}
+                                                {distSchools.length > 0 ? (
+                                                    <div className="flex flex-col gap-1 ml-5">
+                                                        {distSchools.map(s => (
+                                                            <div key={s}
+                                                                className="flex items-center gap-2">
+                                                                <div
+                                                                    className="w-2 h-2 rounded-full flex-shrink-0"
+                                                                    style={{ background: colorMap[s] || '#aaa' }}
+                                                                />
+                                                                <span className="text-[11px]
+                                                                                text-gray-500 truncate">
+                                                                    {s}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="ml-5 text-[11px] text-gray-400 italic">
+                                                        No schools selected
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
                             </div>
                         )}
                     </div>
