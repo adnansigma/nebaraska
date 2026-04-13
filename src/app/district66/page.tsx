@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { ChevronDown, Check } from 'lucide-react'
+import { ChevronDown, Check, ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import { AllData }                       from '@/types'
@@ -17,59 +17,47 @@ const Plot = dynamic(
     { ssr: false, loading: () => <ChartSkeleton /> }
 )
 
+// ⚠️ Replace with exact agency_name from your DB
+const DISTRICT_66_NAME = 'WESTSIDE COMMUNITY SCHOOLS'
 const SUBJECTS = ['Mathematics', 'English Language Arts']
 
-// ── Show Lines Dropdown ───────────────────────────────────────────────────────
+// ── Show Lines Dropdown (State + District only) ───────────────────────────────
 function ShowLinesDropdown({
-    showState,
-    showDistrict,
-    onToggleState,
-    onToggleDistrict,
+    showState, showDistrict, onToggleState, onToggleDistrict,
 }: {
-    showState        : boolean
-    showDistrict     : boolean
-    onToggleState    : () => void
-    onToggleDistrict : () => void
+    showState: boolean; showDistrict: boolean
+    onToggleState: () => void; onToggleDistrict: () => void
 }) {
     const [open, setOpen] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const handler = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node))
-                setOpen(false)
+            if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
         }
         document.addEventListener('mousedown', handler)
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
     const activeCount = (showState ? 1 : 0) + (showDistrict ? 1 : 0)
-    const label =
-        activeCount === 0 ? 'None'
+    const label = activeCount === 0 ? 'None'
         : activeCount === 2 ? 'State + District'
-        : showState ? 'State Avg'
-        : 'District Avg'
+        : showState ? 'State Avg' : 'District Avg'
 
     return (
         <div className="relative" ref={ref}>
-            <p className="text-[11px] font-semibold text-gray-400
-                          uppercase tracking-widest mb-2">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
                 Show Lines
             </p>
-            <button
-                type="button"
-                onClick={() => setOpen(o => !o)}
-                className="w-full h-11 flex items-center justify-between
-                           px-4 bg-white border-[3px] border-[#15315E]
-                           rounded-xl text-sm font-semibold text-gray-700
-                           hover:bg-gray-50 transition-all shadow-sm"
-            >
-                <span className="truncate text-left text-xs">{label}</span>
+            <button type="button" onClick={() => setOpen(o => !o)}
+                className="w-full h-11 flex items-center justify-between px-4 bg-white
+                           border-[3px] border-[#15315E] rounded-xl text-xs font-semibold
+                           text-gray-700 hover:bg-gray-50 transition-all shadow-sm">
+                <span className="truncate text-left">{label}</span>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                     {activeCount > 0 && (
                         <span className="bg-[#0f2448] text-white text-[10px] font-bold
-                                         w-5 h-5 rounded-full flex items-center
-                                         justify-center shadow-sm">
+                                         w-5 h-5 rounded-full flex items-center justify-center">
                             {activeCount}
                         </span>
                     )}
@@ -77,14 +65,12 @@ function ShowLinesDropdown({
                                             duration-200 ${open ? 'rotate-180' : ''}`} />
                 </div>
             </button>
-
             {open && (
-                <div className="absolute z-50 mt-2 right-0 w-56 bg-white
-                                border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
+                <div className="absolute z-50 mt-2 right-0 w-56 bg-white border border-gray-200
+                                rounded-xl shadow-2xl overflow-hidden">
                     <div onClick={onToggleState}
-                         className="flex items-center gap-3 px-4 py-3.5
-                                    hover:bg-gray-50 cursor-pointer transition-colors
-                                    border-b border-gray-100">
+                         className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50
+                                    cursor-pointer transition-colors border-b border-gray-100">
                         <div style={{
                                 borderColor: showState ? '#0f2448' : '#d1d5db',
                                 background : showState ? '#0f2448' : 'white',
@@ -94,18 +80,18 @@ function ShowLinesDropdown({
                             {showState && <Check className="w-3 h-3 text-white stroke-[4]" />}
                         </div>
                         <div className="flex items-center gap-2">
-                            <svg width="26" height="10" className="flex-shrink-0">
+                            <svg width="26" height="10">
                                 <line x1="0" y1="5" x2="26" y2="5"
                                       stroke="#ef4444" strokeWidth="2" strokeDasharray="5,3" />
                             </svg>
-                            <span className={`text-sm select-none ${
-                                showState ? 'text-gray-900 font-semibold' : 'text-gray-500'
-                            }`}>State Average</span>
+                            <span className={`text-sm select-none ${showState ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
+                                State Average
+                            </span>
                         </div>
                     </div>
                     <div onClick={onToggleDistrict}
-                         className="flex items-center gap-3 px-4 py-3.5
-                                    hover:bg-gray-50 cursor-pointer transition-colors">
+                         className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50
+                                    cursor-pointer transition-colors">
                         <div style={{
                                 borderColor: showDistrict ? '#0f2448' : '#d1d5db',
                                 background : showDistrict ? '#0f2448' : 'white',
@@ -115,14 +101,14 @@ function ShowLinesDropdown({
                             {showDistrict && <Check className="w-3 h-3 text-white stroke-[4]" />}
                         </div>
                         <div className="flex items-center gap-2">
-                            <svg width="26" height="10" className="flex-shrink-0">
+                            <svg width="26" height="10">
                                 <line x1="0" y1="5" x2="26" y2="5"
                                       stroke="#1e40af" strokeWidth="2.5" />
                                 <circle cx="13" cy="5" r="2.5" fill="#1e40af" />
                             </svg>
-                            <span className={`text-sm select-none ${
-                                showDistrict ? 'text-gray-900 font-semibold' : 'text-gray-500'
-                            }`}>District Avg</span>
+                            <span className={`text-sm select-none ${showDistrict ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
+                                District 66 Avg
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -131,34 +117,40 @@ function ShowLinesDropdown({
     )
 }
 
-// ── Main Dashboard ────────────────────────────────────────────────────────────
-export default function Dashboard() {
+// ── District 66 Page ──────────────────────────────────────────────────────────
+export default function District66Page() {
     const router = useRouter()
 
-    const [allData,      setAllData]      = useState<AllData | null>(null)
-    const [districts,    setDistricts]    = useState<string[]>([])
-    const [colorMap,     setColorMap]     = useState<Record<string, string>>({})
-    const [dataLoading,  setDataLoading]  = useState(true)
-    const [error,        setError]        = useState('')
+    const [allData,           setAllData]           = useState<AllData | null>(null)
+    const [schoolsByDistrict, setSchoolsByDistrict] = useState<Record<string, string[]>>({})
+    const [colorMap,          setColorMap]          = useState<Record<string, string>>({})
+    const [dataLoading,       setDataLoading]       = useState(true)
+    const [error,             setError]             = useState('')
 
     const [subject,      setSubject]      = useState('Mathematics')
     const [selGrades,    setSelGrades]    = useState<string[]>(['03'])
     const [viewMode,     setViewMode]     = useState<'all' | 'gender'>('all')
-    const [selDistricts, setSelDistricts] = useState<string[]>([])
+    const [selSchools,   setSelSchools]   = useState<string[]>([])
     const [showState,    setShowState]    = useState(true)
     const [showDistrict, setShowDistrict] = useState(true)
     const [subjectOpen,  setSubjectOpen]  = useState(false)
 
     useEffect(() => {
         fetchDashboardData()
-            .then(({ allData, districts, colorMap }) => {
+            .then(({ allData, schoolsByDistrict, colorMap }) => {
                 setAllData(allData)
-                setDistricts(districts)
+                setSchoolsByDistrict(schoolsByDistrict)
                 setColorMap(colorMap)
                 setDataLoading(false)
             })
             .catch(e => { setError(e.message); setDataLoading(false) })
     }, [])
+
+    // Schools that belong to District 66
+    const schoolOptions = useMemo(() => {
+        return (schoolsByDistrict[DISTRICT_66_NAME] ?? [])
+            .map(s => ({ value: s, label: s }))
+    }, [schoolsByDistrict])
 
     const filteredData = useMemo(() => {
         if (!allData) return []
@@ -168,33 +160,30 @@ export default function Dashboard() {
         return source.filter(row => {
             if (!selGrades.includes(row.grade))       return false
             if (row.subgroup_type !== subgroupFilter) return false
-            if (row.level === 'ST')  return showState
+
+            if (row.level === 'ST') return showState
+
             if (row.level === 'DI') {
-                return showDistrict
-                    && selDistricts.length > 0
-                    && selDistricts.includes(row.agency_name)
+                return showDistrict && row.agency_name === DISTRICT_66_NAME
             }
-            return false   // exclude SC rows on main page
+
+            if (row.level === 'SC') {
+                return row.district_name === DISTRICT_66_NAME
+                    && selSchools.includes(row.agency_name)
+            }
+
+            return false
         })
-    }, [allData, subject, selGrades, viewMode, selDistricts, showState, showDistrict])
+    }, [allData, subject, selGrades, viewMode, selSchools, showState, showDistrict])
 
     const traces = useMemo(() =>
         buildTraces({ filteredData, colorMap, viewMode }),
         [filteredData, colorMap, viewMode]
     )
 
-    const districtOptions = useMemo(() =>
-        districts.map(d => ({ value: d, label: d })), [districts])
-
     const gradeLabel = selGrades.length === GRADES.length
         ? 'All Grades'
         : selGrades.map(g => `Grade ${parseInt(g)}`).join(', ')
-
-    const emptyMessage = useMemo(() => {
-        if (selGrades.length === 0)      return 'Please select at least one grade.'
-        if (selDistricts.length === 0)   return 'Select at least one district.'
-        return 'No data for the current selection.'
-    }, [selGrades, selDistricts])
 
     return (
         <div className="min-h-screen bg-[#f4f6f9]">
@@ -224,86 +213,72 @@ export default function Dashboard() {
 
             <main className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12 py-5 sm:py-8">
 
-                {/* ── Page Title + District 66 Button ──────────────────── */}
+                {/* Page Title + Back Button */}
                 <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4">
                     <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            {/* Back button */}
+                            <button
+                                onClick={() => router.push('/')}
+                                className="flex items-center gap-1.5 text-sm font-medium
+                                           text-gray-500 hover:text-[#1a3353] transition-colors"
+                            >
+                                <ArrowLeft className="w-4 h-4" />
+                                All Districts
+                            </button>
+                            <span className="text-gray-300">/</span>
+                            <span className="text-sm font-semibold text-[#1a3353]">
+                                District 66
+                            </span>
+                        </div>
                         <h2 className="text-lg sm:text-xl font-bold text-gray-800">
-                            District Performance Over Time
+                            District 66 — School Performance Over Time
                         </h2>
                         <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                            Average scale score trends by district, grade, and student group
+                            {DISTRICT_66_NAME} · Compare schools against district and state averages
                         </p>
                     </div>
 
-                    {/* District 66 Button */}
-                    <button
-                        onClick={() => router.push('/district66')}
-                        className="flex-shrink-0 flex items-center gap-2
-                                   bg-[#1a3353] hover:bg-[#15315E]
-                                   text-white text-sm font-semibold
-                                   px-4 py-2.5 rounded-xl shadow-md
-                                   transition-all hover:shadow-lg
-                                   border-2 border-white/20"
-                    >
-                        <span className="text-base">🏫</span>
-                        District 66
-                    </button>
                 </div>
 
                 {/* Filter Bar */}
-                {/* ── Filter Bar ───────────────────────────────────────── */}
-                <div className="bg-white rounded-2xl shadow-sm
-                                border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-5">
-                    <div className="grid grid-cols-2 gap-3
-                                    sm:grid-cols-3 sm:gap-4
-                                    lg:flex lg:flex-wrap lg:gap-5 lg:items-end">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-5">
+                    <div
+                        className="grid grid-cols-2 gap-3
+                                sm:grid-cols-3 sm:gap-4
+                                lg:flex lg:flex-wrap lg:gap-3 lg:items-end"
+                    >
 
                         {/* Subject */}
-                        <div className="relative col-span-2 sm:col-span-1
-                                        lg:min-w-[200px]">
+                        <div className="relative flex-shrink-0 w-[180px]">
                             <p className="text-[11px] font-semibold text-gray-400
-                                        uppercase tracking-widest mb-2">
-                                Subject
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => setSubjectOpen(o => !o)}
-                                className="w-full h-11 flex items-center justify-between
-                                        px-4 bg-white border-[3px] border-[#15315E]
-                                        rounded-xl text-sm font-semibold text-gray-700
-                                        hover:bg-gray-50 transition-all shadow-sm"
-                            >
+                                          uppercase tracking-widest mb-2">Subject</p>
+                            <button type="button" onClick={() => setSubjectOpen(o => !o)}
+                                className="w-full h-11 flex items-center justify-between px-4
+                                           bg-white border-[3px] border-[#15315E] rounded-xl
+                                           text-sm font-semibold text-gray-700
+                                           hover:bg-gray-50 transition-all shadow-sm">
                                 <span className="truncate text-left">{subject}</span>
-                                <ChevronDown
-                                    className={`w-4 h-4 text-[#15315E] flex-shrink-0
-                                                transition-transform duration-200
-                                                ${subjectOpen ? 'rotate-180' : ''}`}
-                                />
+                                <ChevronDown className={`w-4 h-4 text-[#15315E] flex-shrink-0
+                                                          transition-transform duration-200
+                                                          ${subjectOpen ? 'rotate-180' : ''}`} />
                             </button>
-
                             {subjectOpen && (
                                 <>
-                                    <div
-                                        className="fixed inset-0 z-40"
-                                        onClick={() => setSubjectOpen(false)}
-                                    />
+                                    <div className="fixed inset-0 z-40"
+                                         onClick={() => setSubjectOpen(false)} />
                                     <div className="absolute z-50 mt-2 w-full bg-white
                                                     border border-gray-200 rounded-xl
                                                     shadow-2xl overflow-hidden">
                                         {SUBJECTS.map(opt => (
-                                            <button
-                                                key={opt}
-                                                onClick={() => {
-                                                    setSubject(opt)
-                                                    setSubjectOpen(false)
-                                                }}
-                                                className={`w-full px-4 py-3 text-left
-                                                            text-sm transition-colors ${
+                                            <button key={opt}
+                                                onClick={() => { setSubject(opt); setSubjectOpen(false) }}
+                                                className={`w-full px-4 py-3 text-left text-sm
+                                                            transition-colors ${
                                                     subject === opt
                                                         ? 'bg-blue-50 text-[#15315E] font-bold'
                                                         : 'text-gray-600 hover:bg-gray-50'
-                                                }`}
-                                            >
+                                                }`}>
                                                 <div className="flex items-center justify-between">
                                                     {opt}
                                                     {subject === opt && (
@@ -318,66 +293,58 @@ export default function Dashboard() {
                         </div>
 
                         {/* Grade */}
-                        <div className="col-span-1 lg:min-w-[120px]">
+                        <div className="flex-shrink-0 w-[140px]">
                             <MultiSelect
                                 label="Grade"
                                 options={GRADES}
                                 selected={selGrades}
                                 onChange={setSelGrades}
-                                placeholder="Select Grades"
+                                placeholder="Select grades..."
                                 accentColor="#0f2448"
                             />
                         </div>
 
                         {/* Student Group */}
-                        <div className="col-span-1 lg:min-w-[190px]">
+                        <div className="flex-shrink-0 w-[190px]">
                             <p className="text-[11px] font-semibold text-gray-400
-                                        uppercase tracking-widest mb-2">
-                                Student Group
-                            </p>
+                                          uppercase tracking-widest mb-2">Student Group</p>
                             <div className="flex h-11 rounded-xl overflow-hidden
                                             border-[3px] border-[#15315E] shadow-sm">
-                                <button
-                                    onClick={() => setViewMode('all')}
-                                    className={`flex-1 text-xs font-semibold
-                                            transition-all px-2 sm:px-3 ${
+                                <button onClick={() => setViewMode('all')}
+                                    className={`flex-1 text-xs font-semibold transition-all px-3 ${
                                         viewMode === 'all'
                                             ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white'
                                             : 'bg-white text-gray-600 hover:bg-slate-50'
-                                    }`}
-                                >
-                                    All Students
-                                </button>
+                                    }`}>All Students</button>
                                 <div className="w-px bg-blue-300" />
-                                <button
-                                    onClick={() => setViewMode('gender')}
-                                    className={`flex-1 text-xs font-semibold
-                                            transition-all px-2 sm:px-3 ${
+                                <button onClick={() => setViewMode('gender')}
+                                    className={`flex-1 text-xs font-semibold transition-all px-3 ${
                                         viewMode === 'gender'
                                             ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white'
                                             : 'bg-white text-gray-600 hover:bg-slate-50'
-                                    }`}
-                                >
-                                    By Gender
-                                </button>
+                                    }`}>By Gender</button>
                             </div>
                         </div>
 
-                        {/* District */}
-                        <div className="col-span-2 sm:col-span-1
-                                        lg:min-w-[220px]">
+                        {/* Schools of District 66 */}
+                        <div className="flex-shrink-0 w-[240px]">
                             <MultiSelect
-                                label="District"
-                                options={districtOptions}
-                                selected={selDistricts}
-                                onChange={setSelDistricts}
-                                placeholder="Select districts"
+                                label="School"
+                                options={schoolOptions}
+                                selected={selSchools}
+                                onChange={setSelSchools}
+                                placeholder={
+                                    schoolOptions.length === 0
+                                        ? 'Loading schools...'
+                                        : 'Select schools...'
+                                }
                                 accentColor="#0f2448"
+                                disabled={schoolOptions.length === 0}
                             />
                         </div>
 
                         {/* Show Lines */}
-                        <div className="col-span-1 lg:self-end">
+                        <div className="flex-shrink-0 w-[180px]">
                             <ShowLinesDropdown
                                 showState={showState}
                                 showDistrict={showDistrict}
@@ -386,18 +353,17 @@ export default function Dashboard() {
                             />
                         </div>
 
-                        {/* Clear */}
-                        <div className="col-span-1 lg:self-end">
+                        {/* Clear schools */}
+                        <div className="flex-shrink-0 self-end">
                             <button
-                                onClick={() => setSelDistricts([])}
-                                disabled={selDistricts.length === 0}
-                                className={`w-full lg:w-auto h-11 px-8 text-sm
-                                        rounded-xl transition-all font-medium ${
-                                    selDistricts.length > 0
-                                        ? 'text-gray-500 hover:text-red-500 border-[3px] border-gray-200 hover:border-red-300'
-                                        : 'text-gray-300 border-[2px] border-gray-100 cursor-not-allowed'
-                                }`}
-                            >
+                                onClick={() => setSelSchools([])}
+                                disabled={selSchools.length === 0}
+                                className={`h-11 px-4 text-sm font-medium rounded-xl
+                                            border-[3px] transition-all ${
+                                    selSchools.length > 0
+                                        ? 'text-gray-500 hover:text-red-500 border-gray-200 hover:border-red-300'
+                                        : 'text-gray-300 border-gray-100 cursor-not-allowed'
+                                }`}>
                                 Clear
                             </button>
                         </div>
@@ -408,15 +374,15 @@ export default function Dashboard() {
                 <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-stretch lg:h-[560px]">
 
                     <div className="w-full lg:flex-1 bg-white rounded-2xl shadow-sm
-                                border border-gray-100 p-4 sm:p-6 min-w-0 h-full">
+                                    border border-gray-100 p-4 sm:p-6 min-w-0 h-full">
                         <div className="flex items-center justify-between mb-4 gap-2">
                             <div>
                                 <h3 className="text-sm sm:text-base font-semibold text-gray-800">
                                     {subject} — {gradeLabel}
                                 </h3>
                                 <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
-                                    {viewMode === 'all'
-                                        ? 'All Students · Weighted average across selected grades'
+                                    District 66 · {viewMode === 'all'
+                                        ? 'All Students'
                                         : 'By Gender · Solid = Male · Dotted = Female'}
                                 </p>
                             </div>
@@ -430,14 +396,17 @@ export default function Dashboard() {
 
                         {dataLoading ? <ChartSkeleton /> :
                          error ? (
-                            <div className="h-64 flex items-center justify-center text-red-500 text-sm">
-                                ⚠️ {error}
-                            </div>
+                            <div className="h-64 flex items-center justify-center
+                                            text-red-500 text-sm">⚠️ {error}</div>
                          ) : traces.length === 0 ? (
                             <div className="h-64 flex flex-col items-center justify-center
                                             text-gray-400 text-sm text-center px-4 gap-2">
                                 <span className="text-2xl">📊</span>
-                                <span>{emptyMessage}</span>
+                                <span>
+                                    {!showState && !showDistrict && selSchools.length === 0
+                                        ? 'Enable State/District lines or select schools.'
+                                        : 'No data for the current selection.'}
+                                </span>
                             </div>
                          ) : (
                             <Plot
@@ -471,7 +440,7 @@ export default function Dashboard() {
                                     displayModeBar: true,
                                     modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
                                     toImageButtonOptions: {
-                                        format: 'png', filename: `NDE_${subject}`, scale: 2,
+                                        format: 'png', filename: `NDE_District66_${subject}`, scale: 2,
                                     },
                                 }}
                                 useResizeHandler={true}
@@ -481,33 +450,26 @@ export default function Dashboard() {
 
                     {/* Right Panel */}
                     <div className="w-full lg:w-52 lg:flex-shrink-0 h-full flex flex-col gap-4 overflow-hidden">
-                        <div className="flex-none">
-                            <LineStyleLegend viewMode={viewMode} />
-                        </div>
+                        <LineStyleLegend viewMode={viewMode} />
 
-                        {selDistricts.length > 0 && (
+                        {selSchools.length > 0 && (
                             <div className="flex-1 bg-white rounded-2xl border border-gray-100
                                         shadow-sm p-4 sm:p-5 flex flex-col min-h-0 overflow-hidden">
                                 <p className="text-[11px] font-semibold text-gray-400
-                                            uppercase tracking-widest mb-3 flex-shrink-0">
-                                    Selected Districts
+                                              uppercase tracking-widest mb-3 flex-shrink-0">
+                                    Selected Schools
                                     <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-500
-                                                    px-1.5 py-0.5 rounded-full normal-case
-                                                    font-bold tracking-normal">
-                                        {selDistricts.length}
+                                                     px-1.5 py-0.5 rounded-full normal-case
+                                                     font-bold tracking-normal">
+                                        {selSchools.length}
                                     </span>
                                 </p>
-
-                                <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
-                                    {selDistricts.map(d => (
-                                        <div key={d} className="flex items-center gap-2">
-                                            <div
-                                                className="w-3 h-3 rounded-full flex-shrink-0"
-                                                style={{ background: colorMap[d] || '#999' }}
-                                            />
-                                            <span className="text-xs text-gray-600 truncate">
-                                                {d}
-                                            </span>
+                                <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
+                                    {selSchools.map(s => (
+                                        <div key={s} className="flex items-center gap-2">
+                                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                                 style={{ background: colorMap[s] || '#aaa' }} />
+                                            <span className="text-xs text-gray-600 truncate">{s}</span>
                                         </div>
                                     ))}
                                 </div>

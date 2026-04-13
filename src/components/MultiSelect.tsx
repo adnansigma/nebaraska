@@ -90,7 +90,7 @@ export function MultiSelect({
             </button>
 
             {open && !disabled && (
-                <div className="absolute z-50 mt-2 w-full bg-white
+                <div className="absolute z-9999 mt-2 w-full bg-white
                                 border border-gray-200 rounded-xl shadow-2xl
                                 overflow-hidden">
 
