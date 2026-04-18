@@ -19,118 +19,6 @@ const Plot = dynamic(
 
 const SUBJECTS = ['Mathematics', 'English Language Arts']
 
-// ── Show Lines Dropdown ───────────────────────────────────────────────────────
-function ShowLinesDropdown({
-    showState,
-    showDistrict,
-    onToggleState,
-    onToggleDistrict,
-}: {
-    showState        : boolean
-    showDistrict     : boolean
-    onToggleState    : () => void
-    onToggleDistrict : () => void
-}) {
-    const [open, setOpen] = useState(false)
-    const ref = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        const handler = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node))
-                setOpen(false)
-        }
-        document.addEventListener('mousedown', handler)
-        return () => document.removeEventListener('mousedown', handler)
-    }, [])
-
-    const activeCount = (showState ? 1 : 0) + (showDistrict ? 1 : 0)
-    const label =
-        activeCount === 0 ? 'None'
-        : activeCount === 2 ? 'State + District'
-        : showState ? 'State Avg'
-        : 'District Avg'
-
-    return (
-        <div className="relative" ref={ref}>
-            <p className="text-[11px] font-semibold text-gray-400
-                          uppercase tracking-widest mb-2">
-                Show Lines
-            </p>
-            <button
-                type="button"
-                onClick={() => setOpen(o => !o)}
-                className="w-full h-11 flex items-center justify-between
-                           px-4 bg-white border-[3px] border-[#15315E]
-                           rounded-xl text-sm font-semibold text-gray-700
-                           hover:bg-gray-50 transition-all shadow-sm"
-            >
-                <span className="truncate text-left text-xs">{label}</span>
-                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                    {activeCount > 0 && (
-                        <span className="bg-[#0f2448] text-white text-[10px] font-bold
-                                         w-5 h-5 rounded-full flex items-center
-                                         justify-center shadow-sm">
-                            {activeCount}
-                        </span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 text-[#15315E] transition-transform
-                                            duration-200 ${open ? 'rotate-180' : ''}`} />
-                </div>
-            </button>
-
-            {open && (
-                <div className="absolute z-50 mt-2 right-0 w-56 bg-white
-                                border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
-                    <div onClick={onToggleState}
-                         className="flex items-center gap-3 px-4 py-3.5
-                                    hover:bg-gray-50 cursor-pointer transition-colors
-                                    border-b border-gray-100">
-                        <div style={{
-                                borderColor: showState ? '#0f2448' : '#d1d5db',
-                                background : showState ? '#0f2448' : 'white',
-                             }}
-                             className="w-4 h-4 rounded border-2 flex-shrink-0
-                                        flex items-center justify-center transition-all">
-                            {showState && <Check className="w-3 h-3 text-white stroke-[4]" />}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <svg width="26" height="10" className="flex-shrink-0">
-                                <line x1="0" y1="5" x2="26" y2="5"
-                                      stroke="#ef4444" strokeWidth="2" strokeDasharray="5,3" />
-                            </svg>
-                            <span className={`text-sm select-none ${
-                                showState ? 'text-gray-900 font-semibold' : 'text-gray-500'
-                            }`}>State Average</span>
-                        </div>
-                    </div>
-                    <div onClick={onToggleDistrict}
-                         className="flex items-center gap-3 px-4 py-3.5
-                                    hover:bg-gray-50 cursor-pointer transition-colors">
-                        <div style={{
-                                borderColor: showDistrict ? '#0f2448' : '#d1d5db',
-                                background : showDistrict ? '#0f2448' : 'white',
-                             }}
-                             className="w-4 h-4 rounded border-2 flex-shrink-0
-                                        flex items-center justify-center transition-all">
-                            {showDistrict && <Check className="w-3 h-3 text-white stroke-[4]" />}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <svg width="26" height="10" className="flex-shrink-0">
-                                <line x1="0" y1="5" x2="26" y2="5"
-                                      stroke="#1e40af" strokeWidth="2.5" />
-                                <circle cx="13" cy="5" r="2.5" fill="#1e40af" />
-                            </svg>
-                            <span className={`text-sm select-none ${
-                                showDistrict ? 'text-gray-900 font-semibold' : 'text-gray-500'
-                            }`}>District Avg</span>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
-
 // ── Main Dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
     const router = useRouter()
@@ -268,7 +156,7 @@ export default function Dashboard() {
                             <button
                                 type="button"
                                 onClick={() => setSubjectOpen(o => !o)}
-                                className="w-full h-11 flex items-center justify-between
+                                className="w-full h-11 flex items-center justify-between gap-3
                                         px-4 bg-white border-[3px] border-[#15315E]
                                         rounded-xl text-sm font-semibold text-gray-700
                                         hover:bg-gray-50 transition-all shadow-sm"
@@ -378,25 +266,34 @@ export default function Dashboard() {
 
                         {/* Show Lines */}
                         <div className="col-span-1 lg:self-end">
-                            <ShowLinesDropdown
-                                showState={showState}
-                                showDistrict={showDistrict}
-                                onToggleState={() => setShowState(s => !s)}
-                                onToggleDistrict={() => setShowDistrict(d => !d)}
-                            />
+                            <button
+                                onClick={() => setShowState(prev => !prev)}
+                                className={`w-full lg:w-auto h-11 px-6 text-sm rounded-xl font-semibold transition-all
+                                    flex items-center justify-center gap-2 border-[3px]
+                                    ${showState
+                                        ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white border-[#15315E] shadow-sm'
+                                        : 'bg-white text-gray-600 border-[#15315E] hover:bg-gray-50'
+                                    }`}
+                            >
+                                State
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-md
+                                    ${showState ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-600'}
+                                `}>
+                                    {showState ? 'ON' : 'OFF'}
+                                </span>
+                            </button>
                         </div>
 
-                        {/* Clear */}
+                        {/* Clear Districts */}
                         <div className="col-span-1 lg:self-end">
                             <button
                                 onClick={() => setSelDistricts([])}
                                 disabled={selDistricts.length === 0}
-                                className={`w-full lg:w-auto h-11 px-8 text-sm
-                                        rounded-xl transition-all font-medium ${
-                                    selDistricts.length > 0
-                                        ? 'text-gray-500 hover:text-red-500 border-[3px] border-gray-200 hover:border-red-300'
-                                        : 'text-gray-300 border-[2px] border-gray-100 cursor-not-allowed'
-                                }`}
+                                className={`w-full lg:w-auto h-11 px-8 text-sm rounded-xl font-medium transition-all
+                                    ${selDistricts.length > 0
+                                        ? 'bg-white text-gray-500 border border-gray-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 shadow-sm active:scale-95'
+                                        : 'bg-transparent text-gray-300 border border-gray-100 cursor-not-allowed'
+                                    }`}
                             >
                                 Clear
                             </button>
@@ -420,12 +317,6 @@ export default function Dashboard() {
                                         : 'By Gender · Solid = Male · Dotted = Female'}
                                 </p>
                             </div>
-                            {!dataLoading && (
-                                <span className="text-xs font-semibold text-gray-400
-                                                 bg-gray-100 px-3 py-1.5 rounded-lg flex-shrink-0">
-                                    {traces.length} lines
-                                </span>
-                            )}
                         </div>
 
                         {dataLoading ? <ChartSkeleton /> :

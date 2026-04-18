@@ -10,6 +10,9 @@ interface BuildTracesParams {
     viewMode    : 'all' | 'gender'
 }
 
+// ✅ Add this
+const DISTRICT_66_NAME = 'WESTSIDE COMMUNITY SCHOOLS'
+
 export function buildTraces({
     filteredData,
     colorMap,
@@ -19,7 +22,7 @@ export function buildTraces({
 
     const result: object[] = []
 
-    // ── All Students view: one weighted avg line per district ─────────────
+    // ── All Students view ─────────────────────────────────────────────
     if (viewMode === 'all') {
         const byDist: Record<string, ScoreRow[]> = {}
 
@@ -31,8 +34,10 @@ export function buildTraces({
 
         Object.entries(byDist).forEach(([key, rows]) => {
             const [name, level] = key.split('|||')
-            const isST  = level === 'ST'
-            const m     = buildYearMap(rows)
+            const isST = level === 'ST'
+            const isDistrict66 = name === DISTRICT_66_NAME
+
+            const m = buildYearMap(rows)
             const years  = Object.keys(m).map(Number).sort()
             const scores = years.map(yr =>
                 weightedAvg(m[yr].scores, m[yr].counts))
@@ -46,7 +51,8 @@ export function buildTraces({
                 showlegend: true,
                 line: {
                     color: isST ? '#dc2626' : colorMap[name] || '#999',
-                    width: isST ? 3.5 : 1.5,
+                    // ✅ thickness logic
+                    width: isST ? 3.5 : isDistrict66 ? 3 : 1.5,
                     dash : isST ? 'dash' : 'solid',
                 },
                 marker: {
@@ -64,26 +70,30 @@ export function buildTraces({
         return result
     }
 
-    // ── By Gender view: Male + Female + Combined per district ─────────────
+    // ── By Gender view ─────────────────────────────────────────────
     const distKeys = [
         ...new Set(filteredData.map(r => `${r.agency_name}|||${r.level}`)),
     ]
 
     distKeys.forEach(key => {
         const [name, level] = key.split('|||')
-        const isST  = level === 'ST'
+        const isST = level === 'ST'
+        const isDistrict66 = name === DISTRICT_66_NAME
+
         const color = isST ? '#dc2626' : colorMap[name] || '#999'
 
-        const maleRows   = filteredData.filter(r =>
+        const maleRows = filteredData.filter(r =>
             r.agency_name === name && r.level === level &&
             r.subgroup_desc === 'Male')
+
         const femaleRows = filteredData.filter(r =>
             r.agency_name === name && r.level === level &&
             r.subgroup_desc === 'Female')
 
         const maleMap   = buildYearMap(maleRows)
         const femaleMap = buildYearMap(femaleRows)
-        const allYears  = [
+
+        const allYears = [
             ...new Set([
                 ...Object.keys(maleMap).map(Number),
                 ...Object.keys(femaleMap).map(Number),
@@ -101,7 +111,12 @@ export function buildTraces({
                 name: isST ? 'State — Male' : name,
                 legendgroup: isST ? '__state_male__' : name,
                 showlegend: true,
-                line  : { color, width: isST ? 3 : 1.5, dash: 'solid' },
+                line: {
+                    color,
+                    // ✅ thickness logic
+                    width: isST ? 3 : isDistrict66 ? 3 : 1.5,
+                    dash: 'solid'
+                },
                 marker: { size: isST ? 9 : 5, color, symbol: 'circle' },
                 opacity: 0.9,
                 hovertemplate: `<b>${name}</b><br>Gender: Male<br>Year: %{x}<br>Score: %{y:.1f}<extra></extra>`,
@@ -119,14 +134,19 @@ export function buildTraces({
                 name: isST ? 'State — Female' : name,
                 legendgroup: isST ? '__state_female__' : name,
                 showlegend: false,
-                line  : { color, width: isST ? 3 : 1.5, dash: 'dot' },
+                line: {
+                    color,
+                    // ✅ thickness logic
+                    width: isST ? 3 : isDistrict66 ? 3 : 1.5,
+                    dash: 'dot'
+                },
                 marker: { size: isST ? 9 : 5, color, symbol: 'diamond' },
                 opacity: 0.9,
                 hovertemplate: `<b>${name}</b><br>Gender: Female<br>Year: %{x}<br>Score: %{y:.1f}<extra></extra>`,
             })
         }
 
-        // Combined weighted average
+        // Combined
         if (maleRows.length && femaleRows.length) {
             const yrs = allYears.filter(yr => maleMap[yr] && femaleMap[yr])
             result.push({
@@ -140,7 +160,12 @@ export function buildTraces({
                 name: isST ? 'State — M+F Combined' : name,
                 legendgroup: isST ? '__state_combined__' : name,
                 showlegend: false,
-                line  : { color, width: isST ? 3 : 2, dash: 'dashdot' },
+                line: {
+                    color,
+                    // ✅ thickness logic
+                    width: isST ? 3 : isDistrict66 ? 3 : 2,
+                    dash: 'dashdot'
+                },
                 marker: { size: isST ? 9 : 5, color, symbol: 'square' },
                 opacity: 0.6,
                 hovertemplate: `<b>${name}</b><br>M+F Weighted Avg<br>Year: %{x}<br>Score: %{y:.1f}<extra></extra>`,

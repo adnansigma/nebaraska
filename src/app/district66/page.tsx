@@ -1,7 +1,8 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { ChevronDown, Check, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import { ChevronDown, Check, ArrowLeft, Link as LinkIcon, ChevronLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import { AllData }                       from '@/types'
@@ -146,10 +147,26 @@ export default function District66Page() {
             .catch(e => { setError(e.message); setDataLoading(false) })
     }, [])
 
-    // Schools that belong to District 66
+    const normalizeSchoolName = (name: string) => {
+        return name
+            .replace(/\s+(ELEMENTARY SCHOOL|ELEMENTARY SCH|MIDDLE SCHOOL)$/i, '')
+            .trim()
+    }
+
     const schoolOptions = useMemo(() => {
-        return (schoolsByDistrict[DISTRICT_66_NAME] ?? [])
-            .map(s => ({ value: s, label: s }))
+        const seen = new Map<string, string>() // normalized → original
+
+        ;(schoolsByDistrict[DISTRICT_66_NAME] ?? []).forEach(s => {
+            const normalized = normalizeSchoolName(s)
+            if (!seen.has(normalized)) {
+                seen.set(normalized, s)
+            }
+        })
+
+        return Array.from(seen.entries()).map(([normalized]) => ({
+            value: normalized,   // ✅ NOW normalized
+            label: normalized
+        }))
     }, [schoolsByDistrict])
 
     const filteredData = useMemo(() => {
@@ -169,15 +186,36 @@ export default function District66Page() {
 
             if (row.level === 'SC') {
                 return row.district_name === DISTRICT_66_NAME
-                    && selSchools.includes(row.agency_name)
+                    && selSchools.includes(normalizeSchoolName(row.agency_name))
             }
 
             return false
         })
     }, [allData, subject, selGrades, viewMode, selSchools, showState, showDistrict])
 
+    const normalizedFilteredData = useMemo(() => {
+        return filteredData.map(row => ({
+            ...row,
+            agency_name: normalizeSchoolName(row.agency_name)
+        }))
+    }, [filteredData])
+
+    const normalizedColorMap = useMemo(() => {
+        const map: Record<string, string> = {}
+
+        Object.entries(colorMap).forEach(([key, val]) => {
+            const normalized = normalizeSchoolName(key)
+            map[normalized] = val
+        })
+
+        // ✅ FORCE District 66 color to match legend
+        map[normalizeSchoolName(DISTRICT_66_NAME)] = '#1e40af'
+
+        return map
+    }, [colorMap])
+
     const traces = useMemo(() =>
-        buildTraces({ filteredData, colorMap, viewMode }),
+        buildTraces({ filteredData: normalizedFilteredData, colorMap: normalizedColorMap, viewMode }),
         [filteredData, colorMap, viewMode]
     )
 
@@ -212,33 +250,26 @@ export default function District66Page() {
             </header>
 
             <main className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12 py-5 sm:py-8">
+                <div className="flex flex-col gap-4 mb-6"> 
+                {/* Back Icon Row */}
+                <div>
+                    <Link 
+                    href="/" 
+                    className="inline-flex p-2 rounded-full bg-white shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors group"
+                    >
+                        <ChevronLeft className="w-4 h-4 text-gray-600 group-hover:text-gray-900" />
+                    </Link>
+                </div>
 
-                {/* Page Title + Back Button */}
-                <div className="mb-4 sm:mb-6 flex items-center justify-between gap-4">
-                    <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            {/* Back button */}
-                            <button
-                                onClick={() => router.push('/')}
-                                className="flex items-center gap-1.5 text-sm font-medium
-                                           text-gray-500 hover:text-[#1a3353] transition-colors"
-                            >
-                                <ArrowLeft className="w-4 h-4" />
-                                All Districts
-                            </button>
-                            <span className="text-gray-300">/</span>
-                            <span className="text-sm font-semibold text-[#1a3353]">
-                                District 66
-                            </span>
-                        </div>
-                        <h2 className="text-lg sm:text-xl font-bold text-gray-800">
-                            District 66 — School Performance Over Time
-                        </h2>
-                        <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                            {DISTRICT_66_NAME} · Compare schools against district and state averages
-                        </p>
-                    </div>
-
+                {/* Title & Description Row */}
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl font-bold text-slate-900">
+                    District 66 — School Performance Over Time
+                    </h1>
+                    <p className="text-sm text-slate-500">
+                    WESTSIDE COMMUNITY SCHOOLS · Compare schools against district and state averages
+                    </p>
+                </div>
                 </div>
 
                 {/* Filter Bar */}
@@ -250,19 +281,24 @@ export default function District66Page() {
                     >
 
                         {/* Subject */}
-                        <div className="relative flex-shrink-0 w-[180px]">
-                            <p className="text-[11px] font-semibold text-gray-400
-                                          uppercase tracking-widest mb-2">Subject</p>
-                            <button type="button" onClick={() => setSubjectOpen(o => !o)}
-                                className="w-full h-11 flex items-center justify-between px-4
-                                           bg-white border-[3px] border-[#15315E] rounded-xl
-                                           text-sm font-semibold text-gray-700
-                                           hover:bg-gray-50 transition-all shadow-sm">
+                        <div className="relative col-span-2 sm:col-span-1 lg:min-w-[200px]"> {/* Added lg:min-w here */}
+                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                                Subject
+                            </p>
+                            <button 
+                                type="button" 
+                                onClick={() => setSubjectOpen(o => !o)}
+                                className="w-full h-11 flex items-center justify-between gap-3 px-4 bg-white
+                                        border-[3px] border-[#15315E] rounded-xl text-sm font-semibold 
+                                        text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
+                            > {/* Changed text-xs to text-sm above */}
                                 <span className="truncate text-left">{subject}</span>
                                 <ChevronDown className={`w-4 h-4 text-[#15315E] flex-shrink-0
-                                                          transition-transform duration-200
-                                                          ${subjectOpen ? 'rotate-180' : ''}`} />
+                                                        transition-transform duration-200
+                                                        ${subjectOpen ? 'rotate-180' : ''}`}
+                                />
                             </button>
+
                             {subjectOpen && (
                                 <>
                                     <div className="fixed inset-0 z-40"
@@ -293,13 +329,13 @@ export default function District66Page() {
                         </div>
 
                         {/* Grade */}
-                        <div className="flex-shrink-0 w-[140px]">
+                        <div className="flex-shrink-0 w-[160px]">
                             <MultiSelect
                                 label="Grade"
                                 options={GRADES}
                                 selected={selGrades}
                                 onChange={setSelGrades}
-                                placeholder="Select grades..."
+                                placeholder="Select grades"
                                 accentColor="#0f2448"
                             />
                         </div>
@@ -353,20 +389,17 @@ export default function District66Page() {
                             />
                         </div>
 
-                        {/* Clear schools */}
-                        <div className="flex-shrink-0 self-end">
-                            <button
-                                onClick={() => setSelSchools([])}
-                                disabled={selSchools.length === 0}
-                                className={`h-11 px-4 text-sm font-medium rounded-xl
-                                            border-[3px] transition-all ${
-                                    selSchools.length > 0
-                                        ? 'text-gray-500 hover:text-red-500 border-gray-200 hover:border-red-300'
-                                        : 'text-gray-300 border-gray-100 cursor-not-allowed'
-                                }`}>
-                                Clear
-                            </button>
-                        </div>
+                        <button
+                        onClick={() => setSelSchools([])}
+                        disabled={selSchools.length === 0}
+                        className={`w-full lg:w-auto h-11 px-8 text-sm rounded-xl font-medium transition-all
+                            ${selSchools.length > 0
+                            ? 'bg-white text-gray-500 border border-gray-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 shadow-sm active:scale-95'
+                            : 'bg-transparent text-gray-300 border border-gray-100 cursor-not-allowed'
+                            }`}
+                        >
+                        Clear All
+                        </button>
                     </div>
                 </div>
 
@@ -386,12 +419,6 @@ export default function District66Page() {
                                         : 'By Gender · Solid = Male · Dotted = Female'}
                                 </p>
                             </div>
-                            {!dataLoading && (
-                                <span className="text-xs font-semibold text-gray-400
-                                                 bg-gray-100 px-3 py-1.5 rounded-lg flex-shrink-0">
-                                    {traces.length} lines
-                                </span>
-                            )}
                         </div>
 
                         {dataLoading ? <ChartSkeleton /> :
@@ -450,7 +477,7 @@ export default function District66Page() {
 
                     {/* Right Panel */}
                     <div className="w-full lg:w-52 lg:flex-shrink-0 h-full flex flex-col gap-4 overflow-hidden">
-                        <LineStyleLegend viewMode={viewMode} />
+                        <LineStyleLegend viewMode={viewMode} showDistrict66={true} />
 
                         {selSchools.length > 0 && (
                             <div className="flex-1 bg-white rounded-2xl border border-gray-100
@@ -468,7 +495,7 @@ export default function District66Page() {
                                     {selSchools.map(s => (
                                         <div key={s} className="flex items-center gap-2">
                                             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                                 style={{ background: colorMap[s] || '#aaa' }} />
+                                                 style={{ background: normalizedColorMap[s] || '#aaa' }} />
                                             <span className="text-xs text-gray-600 truncate">{s}</span>
                                         </div>
                                     ))}
