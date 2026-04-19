@@ -373,7 +373,7 @@ export default function District66Page() {
                                 placeholder={
                                     schoolOptions.length === 0
                                         ? 'Loading schools...'
-                                        : 'Select schools...'
+                                        : 'Select Schools...'
                                 }
                                 accentColor="#0f2448"
                                 disabled={schoolOptions.length === 0}

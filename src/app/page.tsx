@@ -304,7 +304,7 @@ export default function Dashboard() {
                                 options={districtOptions}
                                 selected={selDistricts}
                                 onChange={setSelDistricts}
-                                placeholder="Select districts"
+                                placeholder="Select Districts..."
                                 accentColor="#0f2448"
                             />
                         </div>
