@@ -50,9 +50,13 @@ export default function Dashboard() {
 
     const normalizeName = (name: string) => {
         return name
-            .replace(/\b(PUBLIC SCHOOLS|COMMUNITY SCHOOLS|SCHOOLS|DISTRICT)\b/gi, '')
+            // 1. Remove numbers/digits
+            .replace(/\d+/g, '') 
+            // 2. Remove specific keywords (cleaned up duplicates)
+            .replace(/\b(PUBLIC SCHOOLS?|SCHOOLS?|SCHOOL|PUBLIC|SCH SYSTEM|SCHS|DIST|R|COMM|DISTRICT)\b/gi, '')
+            // 3. Collapse extra spaces and trim
             .replace(/\s+/g, ' ')
-            .trim()
+            .trim();
     }
 
     const filteredData = useMemo(() => {
