@@ -48,31 +48,72 @@ export default function Dashboard() {
             .catch(e => { setError(e.message); setDataLoading(false) })
     }, [])
 
+    const normalizeName = (name: string) => {
+        return name
+            .replace(/\b(PUBLIC SCHOOLS|COMMUNITY SCHOOLS|SCHOOLS|DISTRICT)\b/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+    }
+
     const filteredData = useMemo(() => {
         if (!allData) return []
-        const source         = subject === 'Mathematics' ? allData.math : allData.english
+        const source = subject === 'Mathematics' ? allData.math : allData.english
         const subgroupFilter = viewMode === 'all' ? 'ALL' : 'GENDER'
 
         return source.filter(row => {
-            if (!selGrades.includes(row.grade))       return false
+            if (!selGrades.includes(row.grade)) return false
             if (row.subgroup_type !== subgroupFilter) return false
-            if (row.level === 'ST')  return showState
+            
+            if (row.level === 'ST') return showState
+            
             if (row.level === 'DI') {
-                return showDistrict
-                    && selDistricts.length > 0
-                    && selDistricts.includes(row.agency_name)
+                // Normalize the row name before checking if it's in our selection
+                const normalizedRowName = normalizeName(row.agency_name);
+                return showDistrict 
+                    && selDistricts.length > 0 
+                    && selDistricts.includes(normalizedRowName)
             }
-            return false   // exclude SC rows on main page
+            return false
         })
     }, [allData, subject, selGrades, viewMode, selDistricts, showState, showDistrict])
 
+    // Add this intermediate memo to pass clean names to the chart builder
+    const normalizedFilteredData = useMemo(() => {
+        return filteredData.map(row => ({
+            ...row,
+            agency_name: normalizeName(row.agency_name)
+        }))
+    }, [filteredData])
+
+    const normalizedColorMap = useMemo(() => {
+        const map: Record<string, string> = {}
+        Object.entries(colorMap).forEach(([key, val]) => {
+            map[normalizeName(key)] = val
+        })
+        return map
+    }, [colorMap])
+
     const traces = useMemo(() =>
-        buildTraces({ filteredData, colorMap, viewMode }),
-        [filteredData, colorMap, viewMode]
+        // Pass the normalized versions here!
+        buildTraces({ filteredData: normalizedFilteredData, colorMap: normalizedColorMap, viewMode }),
+        [normalizedFilteredData, normalizedColorMap, viewMode]
     )
 
-    const districtOptions = useMemo(() =>
-        districts.map(d => ({ value: d, label: d })), [districts])
+    const districtOptions = useMemo(() => {
+        const seen = new Map<string, string>();
+        
+        districts.forEach(d => {
+            const normalized = normalizeName(d);
+            if (!seen.has(normalized)) {
+                seen.set(normalized, d);
+            }
+        });
+
+        return Array.from(seen.entries()).map(([normalized]) => ({
+            value: normalized, 
+            label: normalized
+        }));
+    }, [districts]);
 
     const gradeLabel = selGrades.length === GRADES.length
         ? 'All Grades'
@@ -394,11 +435,10 @@ export default function Dashboard() {
                                         <div key={d} className="flex items-center gap-2">
                                             <div
                                                 className="w-3 h-3 rounded-full flex-shrink-0"
-                                                style={{ background: colorMap[d] || '#999' }}
+                                                // Use normalizedColorMap here
+                                                style={{ background: normalizedColorMap[d] || '#999' }} 
                                             />
-                                            <span className="text-xs text-gray-600 truncate">
-                                                {d}
-                                            </span>
+                                            <span className="text-xs text-gray-600 truncate">{d}</span>
                                         </div>
                                     ))}
                                 </div>

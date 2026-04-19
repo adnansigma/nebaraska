@@ -149,7 +149,8 @@ export default function District66Page() {
 
     const normalizeSchoolName = (name: string) => {
         return name
-            .replace(/\s+(ELEMENTARY SCHOOL|ELEMENTARY SCH|MIDDLE SCHOOL)$/i, '')
+            .replace(/\b(ELEMENTARY SCHOOL|ELEMENTARY SCH|MIDDLE SCHOOL|CARL A|ROAD|LANE|HILLS)\b/gi, '')
+            .replace(/\s+/g, ' ') // Collapse extra spaces left behind
             .trim()
     }
 
