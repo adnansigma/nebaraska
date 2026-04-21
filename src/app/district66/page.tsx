@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
-import { ChevronDown, Check, ArrowLeft, Link as LinkIcon, ChevronLeft } from 'lucide-react'
+import { ChevronDown, Check, ArrowLeft, Link as LinkIcon, ChevronLeft, School } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import { AllData }                       from '@/types'
@@ -459,7 +459,7 @@ export default function District66Page() {
                                 style={{ width: '100%' }}
                                 config={{
                                     responsive: true,
-                                    displayModeBar: true,
+                                    displayModeBar: false,
                                     modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
                                     toImageButtonOptions: {
                                         format: 'png', filename: `NDE_District66_${subject}`, scale: 2,
@@ -474,29 +474,40 @@ export default function District66Page() {
                     <div className="w-full lg:w-52 lg:flex-shrink-0 h-full flex flex-col gap-4 overflow-hidden">
                         <LineStyleLegend viewMode={viewMode} showDistrict66={true} />
 
-                        {selSchools.length > 0 && (
-                            <div className="flex-1 bg-white rounded-2xl border border-gray-100
+                        {/* Removed the conditional check here so container always appears */}
+                        <div className="flex-1 bg-white rounded-2xl border border-gray-100
                                         shadow-sm p-4 sm:p-5 flex flex-col min-h-0 overflow-hidden">
-                                <p className="text-[11px] font-semibold text-gray-400
-                                              uppercase tracking-widest mb-3 flex-shrink-0">
-                                    Selected Schools
-                                    <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-500
-                                                     px-1.5 py-0.5 rounded-full normal-case
-                                                     font-bold tracking-normal">
-                                        {selSchools.length}
-                                    </span>
-                                </p>
-                                <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
-                                    {selSchools.map(s => (
+                            <p className="text-[11px] font-semibold text-gray-400
+                                        uppercase tracking-widest mb-3 flex-shrink-0">
+                                Selected Schools
+                                <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-500
+                                                px-1.5 py-0.5 rounded-full normal-case
+                                                font-bold tracking-normal">
+                                    {selSchools.length}
+                                </span>
+                            </p>
+                            
+                            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
+                                {selSchools.length > 0 ? (
+                                    selSchools.map(s => (
                                         <div key={s} className="flex items-center gap-2">
                                             <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                                 style={{ background: normalizedColorMap[s] || '#aaa' }} />
+                                                style={{ background: normalizedColorMap[s] || '#aaa' }} />
                                             <span className="text-xs text-gray-600 truncate">{s}</span>
                                         </div>
-                                    ))}
-                                </div>
+                                    ))
+                                ) : (
+                                    /* Optional: Placeholder text so the empty container looks intentional */
+                                    /* Placeholder when nothing is selected */
+                                    <div className="flex flex-col items-center justify-center h-full text-center opacity-40 grayscale">
+                                        <School size={24} className="text-gray-300 mb-2" />
+                                        <p className="text-[10px] text-gray-400 font-medium leading-tight">
+                                            No schools<br/>selected
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </main>

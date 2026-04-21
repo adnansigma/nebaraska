@@ -58,6 +58,9 @@ export default function EquityPage() {
     }, [])
 
     const yearOptions = useMemo(() => {
+        if (dataLoading || frlData.length === 0) {
+            return [{ value: 'loading', label: 'Loading years...' }];
+        }
         const years = [...new Set(frlData.map(r => String(getYear(r.school_year))))]
             .sort((a, b) => Number(b) - Number(a))
         return years.map(y => ({
@@ -145,7 +148,8 @@ export default function EquityPage() {
                 '<b>%{text}</b><br>' +
                 'FRL: %{x:.1f}%<br>' +
                 'Score: %{y:.1f}<br>' +
-                'vs. Expected: <b>%{customdata[0]}</b><extra></extra>',
+                'Predicted: %{customdata[1]}<br>' +
+                'Difference from expected: <b>%{customdata[0]}</b>',
             showlegend: false,
         }
 
@@ -217,11 +221,22 @@ export default function EquityPage() {
                         <h1 className="text-2xl font-bold text-slate-900">
                             Equity Analysis
                         </h1>
-                        <p className="text-sm text-slate-500 mt-1 max-w-2xl">
-                            Compares each district's average score against what would be expected
-                            given its Free &amp; Reduced Lunch rate — a proxy for student income level.
-                            Districts above the trend line are performing better than expected;
-                            those below warrant closer attention.
+                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                            Each point represents a district, showing its FRL% and average scale score.
+                            The line shows an expected score for districts with similar levels of economic disadvantage.
+                            Districts <span className="text-emerald-600 font-medium">above the line</span> are performing better than expected,
+                            while those <span className="text-red-500 font-medium">below the line</span> are underperforming.
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-2">
+                            FRL% = Percentage of students eligible for free or reduced lunch.
+                        </p>
+                        <p className="text-[11px] mt-2 leading-relaxed">
+                            <span className="text-red-500 font-semibold">Note:</span>{' '}
+                            <span className="text-gray-500">
+                                “Above” or “below” the line compares districts with similar socioeconomic profiles (FRL%).
+                                A district below the line is performing lower than expected relative to similar districts,
+                                not necessarily performing poorly overall.
+                            </span>
                         </p>
                     </div>
                 </div>
@@ -290,16 +305,24 @@ export default function EquityPage() {
                         </div>
 
                         {/* Year */}
+                        {/* Year */}
                         <div className="min-w-[160px]">
-                            <MultiSelect
-                                label="School Year"
-                                options={yearOptions}
-                                selected={selYear ? [selYear] : []}
-                                onChange={vals => setSelYear(vals[0] ?? selYear)}
-                                placeholder="Select Year"
-                                accentColor="#0f2448"
-                                singleSelect={true}
-                            />
+                            {dataLoading ? (
+                                <div className="animate-pulse">
+                                    <div className="h-3 w-12 bg-gray-200 rounded mb-2" /> {/* Mock Label */}
+                                    <div className="h-11 w-full bg-gray-50 border-2 border-gray-100 rounded-xl" /> {/* Mock Input */}
+                                </div>
+                            ) : (
+                                <MultiSelect
+                                    label="School Year"
+                                    options={yearOptions}
+                                    selected={selYear ? [selYear] : []}
+                                    onChange={vals => setSelYear(vals[0] ?? selYear)}
+                                    placeholder="Select Year"
+                                    accentColor="#0f2448"
+                                    singleSelect={true}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -323,9 +346,14 @@ export default function EquityPage() {
                                     <h3 className="text-sm sm:text-base font-semibold text-gray-800">
                                         {subject} — {gradeLabel} · {yearLabel}
                                     </h3>
-                                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
-                                        Each point represents one district &nbsp;·&nbsp;
-                                        X = Free &amp; Reduced Lunch % &nbsp;·&nbsp; Y = Avg Scale Score
+                                    <p className="text-[11px] sm:text-xs text-gray-500 mt-1 leading-relaxed">
+                                        Each dot represents a district.
+                                        <span className="block sm:inline">
+                                            &nbsp;·&nbsp;X-axis: Poverty level (FRL%)
+                                        </span>
+                                        <span className="block sm:inline">
+                                            &nbsp;·&nbsp;Y-axis: Average test score
+                                        </span>
                                     </p>
                                 </div>
 

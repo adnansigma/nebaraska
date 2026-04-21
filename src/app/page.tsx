@@ -405,7 +405,7 @@ export default function Dashboard() {
                                 style={{ width: '100%' }}
                                 config={{
                                     responsive: true,
-                                    displayModeBar: true,
+                                    displayModeBar: false,
                                     modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
                                     toImageButtonOptions: {
                                         format: 'png', filename: `NDE_${subject}`, scale: 2,
@@ -422,33 +422,41 @@ export default function Dashboard() {
                             <LineStyleLegend viewMode={viewMode} />
                         </div>
 
-                        {selDistricts.length > 0 && (
-                            <div className="flex-1 bg-white rounded-2xl border border-gray-100
+                        {/* Removed the conditional check so this container is always visible */}
+                        <div className="flex-1 bg-white rounded-2xl border border-gray-100
                                         shadow-sm p-4 sm:p-5 flex flex-col min-h-0 overflow-hidden">
-                                <p className="text-[11px] font-semibold text-gray-400
+                            <p className="text-[11px] font-semibold text-gray-400
                                             uppercase tracking-widest mb-3 flex-shrink-0">
-                                    Selected Districts
-                                    <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-500
-                                                    px-1.5 py-0.5 rounded-full normal-case
-                                                    font-bold tracking-normal">
-                                        {selDistricts.length}
-                                    </span>
-                                </p>
+                                Selected Districts
+                                <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-500
+                                                px-1.5 py-0.5 rounded-full normal-case
+                                                font-bold tracking-normal">
+                                    {selDistricts.length}
+                                </span>
+                            </p>
 
-                                <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
-                                    {selDistricts.map(d => (
+                            <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
+                                {selDistricts.length > 0 ? (
+                                    selDistricts.map(d => (
                                         <div key={d} className="flex items-center gap-2">
                                             <div
                                                 className="w-3 h-3 rounded-full flex-shrink-0"
-                                                // Use normalizedColorMap here
                                                 style={{ background: normalizedColorMap[d] || '#999' }} 
                                             />
                                             <span className="text-xs text-gray-600 truncate">{d}</span>
                                         </div>
-                                    ))}
-                                </div>
+                                    ))
+                                ) : (
+                                    /* Placeholder when nothing is selected */
+                                    <div className="flex flex-col items-center justify-center h-full text-center opacity-40 grayscale">
+                                        <School size={24} className="text-gray-300 mb-2" />
+                                        <p className="text-[10px] text-gray-400 font-medium leading-tight">
+                                            No districts<br/>selected
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </div>
                     </div>
                 </div>
             </main>
