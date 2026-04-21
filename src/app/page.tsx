@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { ChevronDown, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { School, Scale } from 'lucide-react';
 
 import { AllData }                       from '@/types'
 import { GRADES, TICK_VALS, TICK_TEXTS } from '@/lib/constants'
@@ -136,12 +137,6 @@ export default function Dashboard() {
             <header className="bg-[#1a3353] shadow-lg">
                 <div className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12
                                 py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 lg:w-24 lg:h-24
-                                    rounded-full bg-white/15 flex items-center
-                                    justify-center border border-white/20 flex-shrink-0">
-                        <img src="/nde-logo.webp" alt="NDE Logo"
-                             className="w-10 h-10 sm:w-14 sm:h-14 lg:w-22 lg:h-22 object-contain" />
-                    </div>
                     <div>
                         <h1 className="text-white font-bold text-lg sm:text-xl lg:text-3xl
                                        tracking-wide leading-tight">
@@ -167,20 +162,26 @@ export default function Dashboard() {
                             Average scale score trends by district, grade, and student group
                         </p>
                     </div>
-
-                    {/* District 66 Button */}
+                    <div className="flex items-center gap-2">
                     <button
                         onClick={() => router.push('/district66')}
-                        className="flex-shrink-0 flex items-center gap-2
-                                   bg-[#1a3353] hover:bg-[#15315E]
-                                   text-white text-sm font-semibold
-                                   px-4 py-2.5 rounded-xl shadow-md
-                                   transition-all hover:shadow-lg
-                                   border-2 border-white/20"
+                        className="flex-shrink-0 flex items-center gap-2 bg-[#1a3353] hover:bg-[#15315E]/90 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-md transition-all border-2 cursor-pointer border-white/20"
                     >
-                        <span className="text-base">🏫</span>
+                        <School size={18} className="text-blue-200" /> 
                         District 66
                     </button>
+
+                    {/* Equity Analysis Button */}
+                    <button
+                        onClick={() => router.push('/equity')}
+                        className="flex-shrink-0 flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-md transition-all border-2 cursor-pointer border-white/20"
+                    >
+                        <Scale size={18} className="text-emerald-200" />
+                        Equity Analysis
+                    </button>
+                    </div>
+
+                    
                 </div>
 
                 {/* Filter Bar */}

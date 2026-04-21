@@ -16,3 +16,12 @@ export interface AllData {
     math   : ScoreRow[]
     english: ScoreRow[]
 }
+
+export interface FrlRow {
+    agency_name: string
+    school_year: string
+    pct_frl    : string
+    level      : string
+    district_id: string
+    county_id  : string
+}

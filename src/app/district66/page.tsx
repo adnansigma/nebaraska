@@ -230,13 +230,7 @@ export default function District66Page() {
             {/* Header */}
             <header className="bg-[#1a3353] shadow-lg">
                 <div className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12
-                                py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 lg:w-24 lg:h-24
-                                    rounded-full bg-white/15 flex items-center
-                                    justify-center border border-white/20 flex-shrink-0">
-                        <img src="/nde-logo.webp" alt="NDE Logo"
-                             className="w-10 h-10 sm:w-14 sm:h-14 lg:w-22 lg:h-22 object-contain" />
-                    </div>
+                                py-6 sm:py-4 flex items-center gap-3 sm:gap-4">
                     <div>
                         <h1 className="text-white font-bold text-lg sm:text-xl lg:text-3xl
                                        tracking-wide leading-tight">
