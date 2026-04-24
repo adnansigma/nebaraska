@@ -1,31 +1,45 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
-import dynamic from 'next/dynamic'
-import Link from 'next/link'
-import { ChevronDown, Check, ArrowLeft, Link as LinkIcon, ChevronLeft, School } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import dynamic                                   from 'next/dynamic'
+import Link                                      from 'next/link'
+import { ChevronDown, Check, ChevronLeft, School, TrendingUp, TrendingDown, Minus, BarChart2, ScatterChart, AlertCircle } from 'lucide-react'
 
-import { AllData }                       from '@/types'
+import { AllData, FrlRow }               from '@/types'
 import { GRADES, TICK_VALS, TICK_TEXTS } from '@/lib/constants'
 import { fetchDashboardData }            from '@/services/scoreService'
 import { buildTraces }                   from '@/lib/traceBuilder'
 import { MultiSelect }                   from '@/components/MultiSelect'
 import { LineStyleLegend }               from '@/components/LineStyleLegend'
 import { ChartSkeleton }                 from '@/components/ChartSkeleton'
+import { getYear, weightedAvg }          from '@/lib/chartUtils'
 
 const Plot = dynamic(
     () => import('react-plotly.js').then(mod => mod.default),
     { ssr: false, loading: () => <ChartSkeleton /> }
 )
 
-// ⚠️ Replace with exact agency_name from your DB
 const DISTRICT_66_NAME = 'WESTSIDE COMMUNITY SCHOOLS'
-const SUBJECTS = ['Mathematics', 'English Language Arts']
+const SUBJECTS         = ['Mathematics', 'English Language Arts']
 
-// ── Show Lines Dropdown (State + District only) ───────────────────────────────
-function ShowLinesDropdown({
-    showState, showDistrict, onToggleState, onToggleDistrict,
-}: {
+type Tab = 'performance' | 'equity'
+
+// ── Linear regression ─────────────────────────────────────────────────────────
+function linearRegression(points: { x: number; y: number }[]) {
+    const n = points.length
+    if (n < 2) return null
+    const sumX  = points.reduce((a, p) => a + p.x, 0)
+    const sumY  = points.reduce((a, p) => a + p.y, 0)
+    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0)
+    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0)
+    const denom = n * sumX2 - sumX * sumX
+    if (denom === 0) return null
+    const slope     = (n * sumXY - sumX * sumY) / denom
+    const intercept = (sumY - slope * sumX) / n
+    return { slope, intercept }
+}
+
+// ── Show Lines Dropdown ───────────────────────────────────────────────────────
+function ShowLinesDropdown({ showState, showDistrict, onToggleState, onToggleDistrict }: {
     showState: boolean; showDistrict: boolean
     onToggleState: () => void; onToggleDistrict: () => void
 }) {
@@ -62,8 +76,7 @@ function ShowLinesDropdown({
                             {activeCount}
                         </span>
                     )}
-                    <ChevronDown className={`w-4 h-4 text-[#15315E] transition-transform
-                                            duration-200 ${open ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-4 h-4 text-[#15315E] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                 </div>
             </button>
             {open && (
@@ -72,18 +85,13 @@ function ShowLinesDropdown({
                     <div onClick={onToggleState}
                          className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50
                                     cursor-pointer transition-colors border-b border-gray-100">
-                        <div style={{
-                                borderColor: showState ? '#0f2448' : '#d1d5db',
-                                background : showState ? '#0f2448' : 'white',
-                             }}
-                             className="w-4 h-4 rounded border-2 flex-shrink-0
-                                        flex items-center justify-center transition-all">
+                        <div style={{ borderColor: showState ? '#0f2448' : '#d1d5db', background: showState ? '#0f2448' : 'white' }}
+                             className="w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all">
                             {showState && <Check className="w-3 h-3 text-white stroke-[4]" />}
                         </div>
                         <div className="flex items-center gap-2">
                             <svg width="26" height="10">
-                                <line x1="0" y1="5" x2="26" y2="5"
-                                      stroke="#ef4444" strokeWidth="2" strokeDasharray="5,3" />
+                                <line x1="0" y1="5" x2="26" y2="5" stroke="#ef4444" strokeWidth="2" strokeDasharray="5,3" />
                             </svg>
                             <span className={`text-sm select-none ${showState ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
                                 State Average
@@ -91,20 +99,14 @@ function ShowLinesDropdown({
                         </div>
                     </div>
                     <div onClick={onToggleDistrict}
-                         className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50
-                                    cursor-pointer transition-colors">
-                        <div style={{
-                                borderColor: showDistrict ? '#0f2448' : '#d1d5db',
-                                background : showDistrict ? '#0f2448' : 'white',
-                             }}
-                             className="w-4 h-4 rounded border-2 flex-shrink-0
-                                        flex items-center justify-center transition-all">
+                         className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors">
+                        <div style={{ borderColor: showDistrict ? '#0f2448' : '#d1d5db', background: showDistrict ? '#0f2448' : 'white' }}
+                             className="w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all">
                             {showDistrict && <Check className="w-3 h-3 text-white stroke-[4]" />}
                         </div>
                         <div className="flex items-center gap-2">
                             <svg width="26" height="10">
-                                <line x1="0" y1="5" x2="26" y2="5"
-                                      stroke="#1e40af" strokeWidth="2.5" />
+                                <line x1="0" y1="5" x2="26" y2="5" stroke="#1e40af" strokeWidth="2.5" />
                                 <circle cx="13" cy="5" r="2.5" fill="#1e40af" />
                             </svg>
                             <span className={`text-sm select-none ${showDistrict ? 'text-gray-900 font-semibold' : 'text-gray-500'}`}>
@@ -118,111 +120,430 @@ function ShowLinesDropdown({
     )
 }
 
-// ── District 66 Page ──────────────────────────────────────────────────────────
-export default function District66Page() {
-    const router = useRouter()
+// ── Subject Dropdown (reusable) ───────────────────────────────────────────────
+function SubjectDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+    const [open, setOpen] = useState(false)
+    return (
+        <div className="relative min-w-[200px]">
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Subject</p>
+            <button type="button" onClick={() => setOpen(o => !o)}
+                className="w-full h-11 flex items-center justify-between gap-3 px-4 bg-white
+                           border-[3px] border-[#15315E] rounded-xl text-sm font-semibold
+                           text-gray-700 hover:bg-gray-50 transition-all shadow-sm">
+                <span className="truncate text-left">{value}</span>
+                <ChevronDown className={`w-4 h-4 text-[#15315E] flex-shrink-0 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+            </button>
+            {open && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+                    <div className="absolute z-50 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden">
+                        {SUBJECTS.map(opt => (
+                            <button key={opt} onClick={() => { onChange(opt); setOpen(false) }}
+                                className={`w-full px-4 py-3 text-left text-sm transition-colors ${
+                                    value === opt ? 'bg-blue-50 text-[#15315E] font-bold' : 'text-gray-600 hover:bg-gray-50'
+                                }`}>
+                                <div className="flex items-center justify-between">
+                                    {opt}
+                                    {value === opt && <div className="w-2 h-2 rounded-full bg-[#15315E]" />}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    )
+}
 
+// ── Main Page ─────────────────────────────────────────────────────────────────
+export default function District66Page() {
     const [allData,           setAllData]           = useState<AllData | null>(null)
     const [schoolsByDistrict, setSchoolsByDistrict] = useState<Record<string, string[]>>({})
     const [colorMap,          setColorMap]          = useState<Record<string, string>>({})
+    const [frlData,           setFrlData]           = useState<FrlRow[]>([])
     const [dataLoading,       setDataLoading]       = useState(true)
     const [error,             setError]             = useState('')
+    const [activeTab,         setActiveTab]         = useState<Tab>('performance')
 
-    const [subject,      setSubject]      = useState('Mathematics')
-    const [selGrades,    setSelGrades]    = useState<string[]>(['03'])
-    const [viewMode,     setViewMode]     = useState<'all' | 'gender'>('all')
-    const [selSchools,   setSelSchools]   = useState<string[]>([])
-    const [showState,    setShowState]    = useState(true)
-    const [showDistrict, setShowDistrict] = useState(true)
-    const [subjectOpen,  setSubjectOpen]  = useState(false)
+    // ── Performance tab state ─────────────────────────────────────────────────
+    const [pSubject,     setPSubject]     = useState('Mathematics')
+    const [pGrades,      setPGrades]      = useState<string[]>(['03'])
+    const [pViewMode,    setPViewMode]    = useState<'all' | 'gender'>('all')
+    const [pSelSchools,  setPSelSchools]  = useState<string[]>([])
+    const [pShowState,   setPShowState]   = useState(true)
+    const [pShowDistrict,setPShowDistrict]= useState(true)
+
+    // ── Equity tab state ──────────────────────────────────────────────────────
+    const [eSubject,     setESubject]     = useState('Mathematics')
+    const [eGrades,      setEGrades]      = useState<string[]>(['03'])
+    const [eYear,        setEYear]        = useState<string>('2024')
 
     useEffect(() => {
         fetchDashboardData()
-            .then(({ allData, schoolsByDistrict, colorMap }) => {
+            .then(({ allData, schoolsByDistrict, colorMap, frlData }) => {
                 setAllData(allData)
                 setSchoolsByDistrict(schoolsByDistrict)
                 setColorMap(colorMap)
+                setFrlData(frlData)
                 setDataLoading(false)
             })
             .catch(e => { setError(e.message); setDataLoading(false) })
     }, [])
 
-    const normalizeSchoolName = (name: string) => {
-        return name
+    const normalizeSchoolName = (name: string) =>
+        name
             .replace(/\b(ELEMENTARY SCHOOL|ELEMENTARY SCH|MIDDLE SCHOOL|CARL A|ROAD|LANE|HILLS)\b/gi, '')
-            .replace(/\s+/g, ' ') // Collapse extra spaces left behind
+            .replace(/\s+/g, ' ')
             .trim()
-    }
 
+    // ── Performance tab derived ───────────────────────────────────────────────
     const schoolOptions = useMemo(() => {
-        const seen = new Map<string, string>() // normalized → original
-
+        const seen = new Map<string, string>()
         ;(schoolsByDistrict[DISTRICT_66_NAME] ?? []).forEach(s => {
-            const normalized = normalizeSchoolName(s)
-            if (!seen.has(normalized)) {
-                seen.set(normalized, s)
-            }
+            const n = normalizeSchoolName(s)
+            if (!seen.has(n)) seen.set(n, s)
         })
-
-        return Array.from(seen.entries()).map(([normalized]) => ({
-            value: normalized,   // ✅ NOW normalized
-            label: normalized
-        }))
+        return Array.from(seen.keys()).map(n => ({ value: n, label: n }))
     }, [schoolsByDistrict])
 
     const filteredData = useMemo(() => {
         if (!allData) return []
-        const source         = subject === 'Mathematics' ? allData.math : allData.english
-        const subgroupFilter = viewMode === 'all' ? 'ALL' : 'GENDER'
-
+        const source         = pSubject === 'Mathematics' ? allData.math : allData.english
+        const subgroupFilter = pViewMode === 'all' ? 'ALL' : 'GENDER'
         return source.filter(row => {
-            if (!selGrades.includes(row.grade))       return false
+            if (!pGrades.includes(row.grade))         return false
             if (row.subgroup_type !== subgroupFilter) return false
-
-            if (row.level === 'ST') return showState
-
-            if (row.level === 'DI') {
-                return showDistrict && row.agency_name === DISTRICT_66_NAME
-            }
-
+            if (row.level === 'ST') return pShowState
+            if (row.level === 'DI') return pShowDistrict && row.agency_name === DISTRICT_66_NAME
             if (row.level === 'SC') {
                 return row.district_name === DISTRICT_66_NAME
-                    && selSchools.includes(normalizeSchoolName(row.agency_name))
+                    && pSelSchools.includes(normalizeSchoolName(row.agency_name))
             }
-
             return false
         })
-    }, [allData, subject, selGrades, viewMode, selSchools, showState, showDistrict])
+    }, [allData, pSubject, pGrades, pViewMode, pSelSchools, pShowState, pShowDistrict])
 
-    const normalizedFilteredData = useMemo(() => {
-        return filteredData.map(row => ({
-            ...row,
-            agency_name: normalizeSchoolName(row.agency_name)
-        }))
-    }, [filteredData])
+    const normalizedFilteredData = useMemo(() =>
+        filteredData.map(r => ({ ...r, agency_name: normalizeSchoolName(r.agency_name) })),
+        [filteredData]
+    )
 
     const normalizedColorMap = useMemo(() => {
         const map: Record<string, string> = {}
-
-        Object.entries(colorMap).forEach(([key, val]) => {
-            const normalized = normalizeSchoolName(key)
-            map[normalized] = val
-        })
-
-        // ✅ FORCE District 66 color to match legend
+        Object.entries(colorMap).forEach(([k, v]) => { map[normalizeSchoolName(k)] = v })
         map[normalizeSchoolName(DISTRICT_66_NAME)] = '#1e40af'
-
         return map
     }, [colorMap])
 
     const traces = useMemo(() =>
-        buildTraces({ filteredData: normalizedFilteredData, colorMap: normalizedColorMap, viewMode }),
-        [filteredData, colorMap, viewMode]
+        buildTraces({ filteredData: normalizedFilteredData, colorMap: normalizedColorMap, viewMode: pViewMode }),
+        [normalizedFilteredData, normalizedColorMap, pViewMode]
     )
 
-    const gradeLabel = selGrades.length === GRADES.length
-        ? 'All Grades'
-        : selGrades.map(g => `Grade ${parseInt(g)}`).join(', ')
+    const pGradeLabel = pGrades.length === GRADES.length
+        ? 'All Grades' : pGrades.map(g => `Grade ${parseInt(g)}`).join(', ')
+
+    // ── Equity tab derived ────────────────────────────────────────────────────
+    const eYearOptions = useMemo(() => {
+        const years = [...new Set(
+            frlData.filter(r => r.level === 'SC').map(r => String(getYear(r.school_year)))
+        )].sort((a, b) => Number(b) - Number(a))
+        return years.map(y => ({
+            value: y,
+            label: TICK_TEXTS[TICK_VALS.indexOf(Number(y))] ?? y,
+        }))
+    }, [frlData])
+
+    const schoolScores = useMemo(() => {
+        if (!allData) return {}
+        const source = eSubject === 'Mathematics' ? allData.math : allData.english
+        const rows   = source.filter(r =>
+            r.level         === 'SC'  &&
+            r.subgroup_type === 'ALL' &&
+            r.district_name === DISTRICT_66_NAME &&
+            eGrades.includes(r.grade) &&
+            String(getYear(r.school_year)) === eYear
+        )
+        const bySchool: Record<string, { scores: number[]; counts: number[] }> = {}
+        rows.forEach(r => {
+            const score = parseFloat(r.avg_scale_score)
+            const count = parseFloat(r.count_tested) || 1
+            // Skip rows where the score is not a valid number
+            if (!isFinite(score) || score <= 0) return
+            const name = normalizeSchoolName(r.agency_name)
+            if (!bySchool[name]) bySchool[name] = { scores: [], counts: [] }
+            bySchool[name].scores.push(score)
+            bySchool[name].counts.push(count)
+        })
+        const result: Record<string, number> = {}
+        Object.entries(bySchool).forEach(([name, { scores, counts }]) => {
+            // Only set if we have at least one valid score row
+            if (scores.length > 0) result[name] = weightedAvg(scores, counts)
+        })
+        return result
+    }, [allData, eSubject, eGrades, eYear])
+
+    const schoolFrl = useMemo(() => {
+        const rawMap: Record<string, number> = {}
+        frlData
+            .filter(r => r.level === 'SC' && String(getYear(r.school_year)) === eYear)
+            .forEach(r => {
+                const normalized = normalizeSchoolName(r.agency_name)
+                rawMap[normalized] = Math.round(parseFloat(r.pct_frl) * 100)
+            })
+
+        const frlNames = Object.keys(rawMap)
+        const result: Record<string, number> = { ...rawMap }
+
+        // Debug: log what names exist in FRL data
+        console.log('[schoolFrl] FRL names in rawMap:', frlNames)
+
+        if (allData) {
+            const source = eSubject === 'Mathematics' ? allData.math : allData.english
+            // FRL is a school-level stat — do NOT filter by eGrades here.
+            // A school like SUNSET may only have grade 3 data but still needs
+            // its FRL value resolved when grades 3+4 are both selected.
+            const scoreNames = [
+                ...new Set(
+                    source
+                        .filter(r =>
+                            r.level         === 'SC' &&
+                            r.subgroup_type === 'ALL' &&
+                            r.district_name === DISTRICT_66_NAME &&
+                            String(getYear(r.school_year)) === eYear
+                        )
+                        .map(r => normalizeSchoolName(r.agency_name))
+                )
+            ]
+
+            // Debug: log what names exist in score data
+            console.log('[schoolFrl] Score names from allData:', scoreNames)
+
+            scoreNames.forEach(scoreName => {
+                if (result[scoreName] != null) return
+
+                const scoreWords = scoreName.toLowerCase().split(' ').filter(Boolean)
+
+                // Multiple matching strategies in order of strictness:
+                // 1. First word match
+                // 2. Either name contains the other
+                // 3. Any significant word (3+ chars) shared between names
+                const fuzzyMatch = frlNames.find(frlName => {
+                    const frlWords = frlName.toLowerCase().split(' ').filter(Boolean)
+                    return (
+                        (scoreWords[0] && frlWords[0] && scoreWords[0] === frlWords[0]) ||
+                        frlName.toLowerCase().includes(scoreName.toLowerCase()) ||
+                        scoreName.toLowerCase().includes(frlName.toLowerCase()) ||
+                        scoreWords.some(sw => sw.length >= 3 && frlWords.some(fw => fw === sw))
+                    )
+                })
+
+                if (fuzzyMatch != null) {
+                    console.log(`[schoolFrl] Matched "${scoreName}" -> "${fuzzyMatch}" (${rawMap[fuzzyMatch]}%)`)
+                    result[scoreName] = rawMap[fuzzyMatch]
+                } else {
+                    console.warn(`[schoolFrl] NO MATCH for: "${scoreName}" | FRL names: ${frlNames.join(', ')}`)
+                }
+            })
+        }
+
+        return result
+    }, [frlData, eYear, allData, eSubject, eGrades])
+
+    // ── eScatterPoints: ALL schools from schoolScores, regardless of FRL match ──
+    const eScatterPoints = useMemo(() => {
+        // Track which grades each school has data for
+        const gradesBySchool: Record<string, Set<string>> = {}
+
+        if (allData) {
+            const source = eSubject === 'Mathematics' ? allData.math : allData.english
+            source
+                .filter(r => {
+                    const score = parseFloat(r.avg_scale_score)
+                    return (
+                        r.level         === 'SC' &&
+                        r.subgroup_type === 'ALL' &&
+                        r.district_name === DISTRICT_66_NAME &&
+                        eGrades.includes(r.grade) &&
+                        String(getYear(r.school_year)) === eYear &&
+                        isFinite(score) && score > 0   // ← only valid-score rows
+                    )
+                })
+                .forEach(r => {
+                    const name = normalizeSchoolName(r.agency_name)
+                    if (!gradesBySchool[name]) gradesBySchool[name] = new Set()
+                    gradesBySchool[name].add(r.grade)
+                })
+        }
+
+        // Debug: log schoolScores keys so we can see which schools have scores
+        console.log('[eScatterPoints] schoolScores keys:', Object.keys(schoolScores))
+        console.log('[eScatterPoints] schoolFrl keys:', Object.keys(schoolFrl))
+
+        // Keep ALL schools that have a valid score — filter out NaN/0/undefined
+        return Object.entries(schoolScores)
+            .filter(([, score]) => isFinite(score) && score > 0)
+            .map(([name, score]) => {
+                const frl         = schoolFrl[name]
+                const hasFrl      = frl != null && !isNaN(frl)
+                const schoolGrades  = gradesBySchool[name] ?? new Set()
+                const gradesPresent = [...schoolGrades]
+                    .sort()
+                    .map(g => parseInt(g).toString())
+                    .join(', ')
+                const gradesUsed    = schoolGrades.size
+                const totalSelected = eGrades.length
+                const isPartial     = gradesUsed < totalSelected
+
+                console.log(`[eScatterPoints] "${name}" | score=${score.toFixed(1)} | frl=${frl} | hasFrl=${hasFrl} | gradesPresent=${gradesPresent} | isPartial=${isPartial}`)
+                return {
+                    name,
+                    x           : hasFrl ? frl : null,   // null when no FRL data
+                    y           : score,
+                    hasFrl,
+                    color       : normalizedColorMap[name] || '#94a3b8',
+                    gradesPresent,
+                    gradesUsed,
+                    totalSelected,
+                    isPartial,
+                }
+            })
+    }, [schoolScores, schoolFrl, normalizedColorMap, allData, eSubject, eGrades, eYear])
+
+    // Regression only uses schools that have FRL data (need x to draw the line)
+    const eRegression = useMemo(() => {
+        const plottable = eScatterPoints.filter(p => p.hasFrl) as { x: number; y: number }[]
+        if (plottable.length < 3) return null
+        return linearRegression(plottable)
+    }, [eScatterPoints])
+
+    const eWithGap = useMemo(() => {
+        return eScatterPoints.map(p => {
+            if (!p.hasFrl || !eRegression) {
+                return { ...p, gap: 0, predicted: p.y }
+            }
+            const predicted = eRegression.slope * (p.x as number) + eRegression.intercept
+            return { ...p, predicted, gap: p.y - predicted }
+        })
+    }, [eScatterPoints, eRegression])
+
+    const eTraces = useMemo(() => {
+        // Only plot schools that have FRL data (need an x value for the scatter)
+        const plottable    = eWithGap.filter(p => p.hasFrl)
+        const fullPoints   = plottable.filter(p => !p.isPartial)
+        const partialPoints= plottable.filter(p => p.isPartial)
+
+        if (!plottable.length) return []
+
+        const result: object[] = []
+
+        // Full data points — solid, full opacity
+        if (fullPoints.length > 0) {
+            result.push({
+                type        : 'scatter',
+                mode        : 'markers+text',
+                name        : 'All selected grades',
+                x           : fullPoints.map(p => p.x),
+                y           : fullPoints.map(p => p.y),
+                text        : fullPoints.map(p => p.name),
+                textposition: 'top center',
+                textfont    : { size: 9, color: '#6b7280' },
+                customdata  : fullPoints.map(p => [
+                    p.gap.toFixed(1),
+                    p.predicted.toFixed(1),
+                    p.gradesPresent,
+                    p.gradesUsed,
+                    p.totalSelected,
+                ]),
+                marker: {
+                    size   : 12,
+                    color  : fullPoints.map(p => p.color),
+                    opacity: 0.9,
+                    line   : { width: 1.5, color: '#fff' },
+                },
+                hovertemplate:
+                    '<b>%{text}</b><br>' +
+                    'FRL: %{x:.0f}%<br>' +
+                    'Score: %{y:.1f}<br>' +
+                    'vs. Expected: <b>%{customdata[0]}</b><br>' +
+                    'Weighted avg of Grade(s): %{customdata[2]}' +
+                    '<extra></extra>',
+                showlegend: false,
+            })
+        }
+
+        // Partial data points — open circle, lower opacity
+        if (partialPoints.length > 0) {
+            result.push({
+                type        : 'scatter',
+                mode        : 'markers+text',
+                name        : 'Partial grade data',
+                x           : partialPoints.map(p => p.x),
+                y           : partialPoints.map(p => p.y),
+                text        : partialPoints.map(p => p.name),
+                textposition: 'top center',
+                textfont    : { size: 9, color: '#9ca3af' },
+                customdata  : partialPoints.map(p => [
+                    p.gap.toFixed(1),
+                    p.predicted.toFixed(1),
+                    p.gradesPresent,
+                    p.gradesUsed,
+                    p.totalSelected,
+                ]),
+                marker: {
+                    size   : 12,
+                    color  : partialPoints.map(p => p.color),
+                    opacity: 0.45,
+                    symbol : 'circle-open',
+                    line   : { width: 2.5, color: partialPoints.map(p => p.color) },
+                },
+                hovertemplate:
+                    '<b>%{text}</b><br>' +
+                    'FRL: %{x:.0f}%<br>' +
+                    'Score: %{y:.1f}<br>' +
+                    'vs. Expected: <b>%{customdata[0]}</b><br>' +
+                    'Weighted avg of Grade(s): %{customdata[2]}<br>' +
+                    '<i>%{customdata[3]} of %{customdata[4]} selected grades available</i>' +
+                    '<extra></extra>',
+                showlegend: false,
+            })
+        }
+
+        // Regression trend line
+        if (eRegression) {
+            const xs    = plottable.map(p => p.x as number)
+            const lineX = [Math.min(...xs) - 2, Math.max(...xs) + 2]
+            result.push({
+                type      : 'scatter',
+                mode      : 'lines',
+                x         : lineX,
+                y         : lineX.map(x => eRegression.slope * x + eRegression.intercept),
+                line      : { color: '#94a3b8', width: 1.5, dash: 'dash' },
+                hoverinfo : 'skip',
+                showlegend: false,
+            })
+        }
+
+        return result
+    }, [eWithGap, eRegression])
+
+    // Schools with FRL data, sorted by gap — used for Top / Bottom cards
+    const eSorted = useMemo(() =>
+        [...eWithGap].filter(p => p.hasFrl).sort((a, b) => b.gap - a.gap),
+        [eWithGap]
+    )
+    const eTop    = eSorted.slice(0, 3)
+    const eBottom = eSorted.slice(-3).reverse()
+
+    // Schools WITHOUT FRL data — shown in the "no FRL" callout
+    const eNoFrl = useMemo(() =>
+        eWithGap.filter(p => !p.hasFrl),
+        [eWithGap]
+    )
+
+    const eGradeLabel = eGrades.length === GRADES.length
+        ? 'All Grades' : eGrades.map(g => `Grade ${parseInt(g)}`).join(', ')
+    const eYearLabel  = eYearOptions.find(y => y.value === eYear)?.label ?? eYear
 
     return (
         <div className="min-h-screen bg-[#f4f6f9]">
@@ -230,14 +551,12 @@ export default function District66Page() {
             {/* Header */}
             <header className="bg-[#1a3353] shadow-lg">
                 <div className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12
-                                py-6 sm:py-4 flex items-center gap-3 sm:gap-4">
+                                py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
                     <div>
-                        <h1 className="text-white font-bold text-lg sm:text-xl lg:text-3xl
-                                       tracking-wide leading-tight">
+                        <h1 className="text-white font-bold text-lg sm:text-xl lg:text-3xl tracking-wide leading-tight">
                             Nebraska Department of Education
                         </h1>
-                        <p className="text-blue-200 text-[10px] sm:text-xs mt-0.5
-                                      font-medium tracking-widest uppercase">
+                        <p className="text-blue-200 text-[10px] sm:text-xs mt-0.5 font-medium tracking-widest uppercase">
                             Assessment Data Dashboard
                         </p>
                     </div>
@@ -245,271 +564,381 @@ export default function District66Page() {
             </header>
 
             <main className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12 py-5 sm:py-8">
-                <div className="flex flex-col gap-4 mb-6"> 
-                {/* Back Icon Row */}
-                <div>
-                    <Link 
-                    href="/" 
-                    className="inline-flex p-2 rounded-full bg-white shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors group"
-                    >
+
+                {/* Back + Title */}
+                <div className="flex flex-col gap-4 mb-6">
+                    <Link href="/"
+                        className="inline-flex p-2 rounded-full bg-white shadow-sm border border-gray-200
+                                   hover:bg-gray-50 transition-colors group w-fit">
                         <ChevronLeft className="w-4 h-4 text-gray-600 group-hover:text-gray-900" />
                     </Link>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-900">District 66</h1>
+                        <p className="text-sm text-slate-500 mt-0.5">
+                            WESTSIDE COMMUNITY SCHOOLS
+                        </p>
+                    </div>
                 </div>
 
-                {/* Title & Description Row */}
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl font-bold text-slate-900">
-                    District 66 — School Performance Over Time
-                    </h1>
-                    <p className="text-sm text-slate-500">
-                    WESTSIDE COMMUNITY SCHOOLS · Compare schools against district and state averages
-                    </p>
-                </div>
-                </div>
-
-                {/* Filter Bar */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-4 sm:mb-5">
-                    <div
-                        className="grid grid-cols-2 gap-3
-                                sm:grid-cols-3 sm:gap-4
-                                lg:flex lg:flex-wrap lg:gap-3 lg:items-end"
+                {/* ── Tab Switcher ─────────────────────────────────────────────────── */}
+                <div className="flex gap-1 bg-white border border-gray-200 rounded-2xl p-1.5
+                                shadow-sm mb-6 w-fit">
+                    <button
+                        onClick={() => setActiveTab('performance')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                                    transition-all duration-200 ${
+                            activeTab === 'performance'
+                                ? 'bg-[#1a3353] text-white shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        }`}
                     >
+                        <BarChart2 className="w-4 h-4" />
+                        Performance Over Time
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('equity')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                                    transition-all duration-200 ${
+                            activeTab === 'equity'
+                                ? 'bg-[#1a3353] text-white shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                        <ScatterChart className="w-4 h-4" />
+                        Equity Analysis
+                    </button>
+                </div>
 
-                        {/* Subject */}
-                        <div className="relative col-span-2 sm:col-span-1 lg:min-w-[200px]"> {/* Added lg:min-w here */}
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                                Subject
-                            </p>
-                            <button 
-                                type="button" 
-                                onClick={() => setSubjectOpen(o => !o)}
-                                className="w-full h-11 flex items-center justify-between gap-3 px-4 bg-white
-                                        border-[3px] border-[#15315E] rounded-xl text-sm font-semibold 
-                                        text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
-                            > {/* Changed text-xs to text-sm above */}
-                                <span className="truncate text-left">{subject}</span>
-                                <ChevronDown className={`w-4 h-4 text-[#15315E] flex-shrink-0
-                                                        transition-transform duration-200
-                                                        ${subjectOpen ? 'rotate-180' : ''}`}
-                                />
-                            </button>
+                {/* ══════════════════════════════════════════════════════════════════ */}
+                {/* TAB: Performance Over Time                                        */}
+                {/* ══════════════════════════════════════════════════════════════════ */}
+                {activeTab === 'performance' && (
+                    <div>
+                        <p className="text-sm text-slate-500 mb-5">
+                            Compare individual school trends against district and state averages over time.
+                        </p>
 
-                            {subjectOpen && (
-                                <>
-                                    <div className="fixed inset-0 z-40"
-                                         onClick={() => setSubjectOpen(false)} />
-                                    <div className="absolute z-50 mt-2 w-full bg-white
-                                                    border border-gray-200 rounded-xl
-                                                    shadow-2xl overflow-hidden">
-                                        {SUBJECTS.map(opt => (
-                                            <button key={opt}
-                                                onClick={() => { setSubject(opt); setSubjectOpen(false) }}
-                                                className={`w-full px-4 py-3 text-left text-sm
-                                                            transition-colors ${
-                                                    subject === opt
-                                                        ? 'bg-blue-50 text-[#15315E] font-bold'
-                                                        : 'text-gray-600 hover:bg-gray-50'
-                                                }`}>
-                                                <div className="flex items-center justify-between">
-                                                    {opt}
-                                                    {subject === opt && (
-                                                        <div className="w-2 h-2 rounded-full bg-[#15315E]" />
-                                                    )}
-                                                </div>
-                                            </button>
-                                        ))}
+                        {/* Filter bar */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100
+                                        p-4 sm:p-6 mb-5">
+                            <div className="flex flex-wrap gap-3 items-end">
+                                <SubjectDropdown value={pSubject} onChange={setPSubject} />
+
+                                <div className="w-[160px]">
+                                    <MultiSelect label="Grade" options={GRADES} selected={pGrades}
+                                        onChange={setPGrades} placeholder="Select grades" accentColor="#0f2448" />
+                                </div>
+
+                                <div className="w-[190px]">
+                                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
+                                        Student Group
+                                    </p>
+                                    <div className="flex h-11 rounded-xl overflow-hidden border-[3px] border-[#15315E] shadow-sm">
+                                        <button onClick={() => setPViewMode('all')}
+                                            className={`flex-1 text-xs font-semibold transition-all px-3 ${
+                                                pViewMode === 'all'
+                                                    ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white'
+                                                    : 'bg-white text-gray-600 hover:bg-slate-50'
+                                            }`}>All Students</button>
+                                        <div className="w-px bg-blue-300" />
+                                        <button onClick={() => setPViewMode('gender')}
+                                            className={`flex-1 text-xs font-semibold transition-all px-3 ${
+                                                pViewMode === 'gender'
+                                                    ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white'
+                                                    : 'bg-white text-gray-600 hover:bg-slate-50'
+                                            }`}>By Gender</button>
                                     </div>
-                                </>
+                                </div>
+
+                                <div className="w-[240px]">
+                                    <MultiSelect label="School" options={schoolOptions} selected={pSelSchools}
+                                        onChange={setPSelSchools}
+                                        placeholder={schoolOptions.length === 0 ? 'Loading...' : 'Select Schools...'}
+                                        accentColor="#0f2448" disabled={schoolOptions.length === 0} />
+                                </div>
+
+                                <div className="w-[180px]">
+                                    <ShowLinesDropdown showState={pShowState} showDistrict={pShowDistrict}
+                                        onToggleState={() => setPShowState(s => !s)}
+                                        onToggleDistrict={() => setPShowDistrict(d => !d)} />
+                                </div>
+
+                                <button onClick={() => setPSelSchools([])} disabled={pSelSchools.length === 0}
+                                    className={`h-11 px-6 text-sm rounded-xl font-medium transition-all self-end
+                                        ${pSelSchools.length > 0
+                                            ? 'bg-white text-gray-500 border border-gray-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 shadow-sm'
+                                            : 'bg-transparent text-gray-300 border border-gray-100 cursor-not-allowed'
+                                        }`}>
+                                    Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Chart + right panel */}
+                        <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-stretch lg:h-[560px]">
+                            <div className="w-full lg:flex-1 bg-white rounded-2xl shadow-sm
+                                            border border-gray-100 p-4 sm:p-6 min-w-0 h-full">
+                                <div className="mb-4">
+                                    <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                                        {pSubject} — {pGradeLabel}
+                                    </h3>
+                                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                                        District 66 · {pViewMode === 'all'
+                                            ? 'All Students'
+                                            : 'By Gender · Solid = Male · Dotted = Female'}
+                                    </p>
+                                </div>
+                                {dataLoading ? <ChartSkeleton /> :
+                                 error ? (
+                                    <div className="h-64 flex items-center justify-center text-red-500 text-sm">{error}</div>
+                                 ) : traces.length === 0 ? (
+                                    <div className="h-64 flex items-center justify-center text-gray-400 text-sm text-center px-4">
+                                        {!pShowState && !pShowDistrict && pSelSchools.length === 0
+                                            ? 'Enable State/District lines or select schools.'
+                                            : 'No data for the current selection.'}
+                                    </div>
+                                 ) : (
+                                    <Plot data={traces as any}
+                                        layout={{
+                                            xaxis: { title: { text: 'School Year', font: { size: 11 } }, tickmode: 'array',
+                                                tickvals: TICK_VALS, ticktext: TICK_TEXTS, gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
+                                            yaxis: { title: { text: 'Average Scale Score', font: { size: 11 } }, gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
+                                            hovermode: 'closest', showlegend: false,
+                                            plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                            height: 420, margin: { t: 10, r: 10, b: 55, l: 60 },
+                                            autosize: true, font: { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
+                                        }}
+                                        style={{ width: '100%' }}
+                                        config={{ responsive: true, displayModeBar: false,
+                                            toImageButtonOptions: { format: 'png', filename: `NDE_D66_${pSubject}`, scale: 2 } }}
+                                        useResizeHandler={true}
+                                    />
+                                )}
+                            </div>
+
+                            {/* Right panel */}
+                            <div className="w-full lg:w-52 lg:flex-shrink-0 h-full flex flex-col gap-4 overflow-hidden">
+                                <LineStyleLegend viewMode={pViewMode} showDistrict66={true} />
+                                <div className="flex-1 bg-white rounded-2xl border border-gray-100
+                                                shadow-sm p-4 sm:p-5 flex flex-col min-h-0 overflow-hidden">
+                                    <p className="text-[11px] font-semibold text-gray-400
+                                                  uppercase tracking-widest mb-3 flex-shrink-0">
+                                        Selected Schools
+                                        <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-500
+                                                         px-1.5 py-0.5 rounded-full normal-case font-bold tracking-normal">
+                                            {pSelSchools.length}
+                                        </span>
+                                    </p>
+                                    <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
+                                        {pSelSchools.length > 0 ? (
+                                            pSelSchools.map(s => (
+                                                <div key={s} className="flex items-center gap-2">
+                                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                                         style={{ background: normalizedColorMap[s] || '#aaa' }} />
+                                                    <span className="text-xs text-gray-600 truncate">{s}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center h-full text-center opacity-40">
+                                                <School size={24} className="text-gray-300 mb-2" />
+                                                <p className="text-[10px] text-gray-400 font-medium leading-tight">
+                                                    No schools<br />selected
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ══════════════════════════════════════════════════════════════════ */}
+                {/* TAB: Equity Analysis                                              */}
+                {/* ══════════════════════════════════════════════════════════════════ */}
+                {activeTab === 'equity' && (
+                    <div>
+                        <p className="text-sm text-slate-500 mb-5">
+                            Each school is plotted by its poverty rate vs. average score.
+                            Schools <span className="text-emerald-600 font-medium">above the trend line</span> are
+                            outperforming expectations; those <span className="text-red-500 font-medium">below</span> warrant attention.
+                        </p>
+
+                        {/* Filter bar */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100
+                                        p-4 sm:p-5 mb-5">
+                            <div className="flex flex-wrap gap-4 items-end">
+                                <SubjectDropdown value={eSubject} onChange={setESubject} />
+
+                                <div className="min-w-[150px]">
+                                    <MultiSelect label="Grade" options={GRADES} selected={eGrades}
+                                        onChange={setEGrades} placeholder="Select Grades" accentColor="#0f2448" />
+                                </div>
+
+                                <div className="min-w-[160px]">
+                                    <MultiSelect label="School Year" options={eYearOptions}
+                                        selected={eYear ? [eYear] : []}
+                                        onChange={vals => setEYear(vals[0] ?? eYear)}
+                                        placeholder="Select Year" accentColor="#0f2448" singleSelect={true} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Scatter card */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                            <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+                                <div>
+                                    <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                                        {eSubject} — {eGradeLabel} · {eYearLabel}
+                                    </h3>
+                                    <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                                        Each point is one school &nbsp;·&nbsp;
+                                        X = Free &amp; Reduced Lunch % &nbsp;·&nbsp; Y = Avg Scale Score
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5">
+                                        <TrendingUp className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                                        <span className="text-[11px] font-semibold text-emerald-700 whitespace-nowrap">
+                                            Above line — Outperforming
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-2.5 py-1.5">
+                                        <TrendingDown className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
+                                        <span className="text-[11px] font-semibold text-red-600 whitespace-nowrap">
+                                            Below line — Underperforming
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
+                                        <Minus className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                        <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+                                            Expected trend
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {dataLoading ? <ChartSkeleton /> :
+                             eTraces.length === 0 ? (
+                                <div className="h-64 flex items-center justify-center text-gray-400 text-sm">
+                                    No FRL data available for the selected filters.
+                                </div>
+                             ) : (
+                                <Plot data={eTraces as any}
+                                    layout={{
+                                        xaxis: { title: { text: 'Free & Reduced Lunch (%)', font: { size: 11 } },
+                                            gridcolor: '#f3f4f6', linecolor: '#e5e7eb', ticksuffix: '%' },
+                                        yaxis: { title: { text: 'Average Scale Score', font: { size: 11 } },
+                                            gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
+                                        hovermode: 'closest', showlegend: false,
+                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                        height: 420, margin: { t: 30, r: 20, b: 60, l: 70 },
+                                        autosize: true, font: { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
+                                    }}
+                                    style={{ width: '100%' }}
+                                    config={{ responsive: true, displayModeBar: false,
+                                        toImageButtonOptions: { format: 'png', filename: `NDE_D66_Equity_${eSubject}`, scale: 2 } }}
+                                    useResizeHandler={true}
+                                />
                             )}
                         </div>
 
-                        {/* Grade */}
-                        <div className="flex-shrink-0 w-[160px]">
-                            <MultiSelect
-                                label="Grade"
-                                options={GRADES}
-                                selected={selGrades}
-                                onChange={setSelGrades}
-                                placeholder="Select grades"
-                                accentColor="#0f2448"
-                            />
-                        </div>
-
-                        {/* Student Group */}
-                        <div className="flex-shrink-0 w-[190px]">
-                            <p className="text-[11px] font-semibold text-gray-400
-                                          uppercase tracking-widest mb-2">Student Group</p>
-                            <div className="flex h-11 rounded-xl overflow-hidden
-                                            border-[3px] border-[#15315E] shadow-sm">
-                                <button onClick={() => setViewMode('all')}
-                                    className={`flex-1 text-xs font-semibold transition-all px-3 ${
-                                        viewMode === 'all'
-                                            ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white'
-                                            : 'bg-white text-gray-600 hover:bg-slate-50'
-                                    }`}>All Students</button>
-                                <div className="w-px bg-blue-300" />
-                                <button onClick={() => setViewMode('gender')}
-                                    className={`flex-1 text-xs font-semibold transition-all px-3 ${
-                                        viewMode === 'gender'
-                                            ? 'bg-gradient-to-b from-[#004080] to-[#003366] text-white'
-                                            : 'bg-white text-gray-600 hover:bg-slate-50'
-                                    }`}>By Gender</button>
-                            </div>
-                        </div>
-
-                        {/* Schools of District 66 */}
-                        <div className="flex-shrink-0 w-[240px]">
-                            <MultiSelect
-                                label="School"
-                                options={schoolOptions}
-                                selected={selSchools}
-                                onChange={setSelSchools}
-                                placeholder={
-                                    schoolOptions.length === 0
-                                        ? 'Loading schools...'
-                                        : 'Select Schools...'
-                                }
-                                accentColor="#0f2448"
-                                disabled={schoolOptions.length === 0}
-                            />
-                        </div>
-
-                        {/* Show Lines */}
-                        <div className="flex-shrink-0 w-[180px]">
-                            <ShowLinesDropdown
-                                showState={showState}
-                                showDistrict={showDistrict}
-                                onToggleState={() => setShowState(s => !s)}
-                                onToggleDistrict={() => setShowDistrict(d => !d)}
-                            />
-                        </div>
-
-                        <button
-                        onClick={() => setSelSchools([])}
-                        disabled={selSchools.length === 0}
-                        className={`w-full lg:w-auto h-11 px-8 text-sm rounded-xl font-medium transition-all
-                            ${selSchools.length > 0
-                            ? 'bg-white text-gray-500 border border-gray-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 shadow-sm active:scale-95'
-                            : 'bg-transparent text-gray-300 border border-gray-100 cursor-not-allowed'
-                            }`}
-                        >
-                        Clear All
-                        </button>
-                    </div>
-                </div>
-
-                {/* Chart + Legend */}
-                <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 items-stretch lg:h-[560px]">
-
-                    <div className="w-full lg:flex-1 bg-white rounded-2xl shadow-sm
-                                    border border-gray-100 p-4 sm:p-6 min-w-0 h-full">
-                        <div className="flex items-center justify-between mb-4 gap-2">
-                            <div>
-                                <h3 className="text-sm sm:text-base font-semibold text-gray-800">
-                                    {subject} — {gradeLabel}
-                                </h3>
-                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
-                                    District 66 · {viewMode === 'all'
-                                        ? 'All Students'
-                                        : 'By Gender · Solid = Male · Dotted = Female'}
-                                </p>
-                            </div>
-                        </div>
-
-                        {dataLoading ? <ChartSkeleton /> :
-                         error ? (
-                            <div className="h-64 flex items-center justify-center
-                                            text-red-500 text-sm">⚠️ {error}</div>
-                         ) : traces.length === 0 ? (
-                            <div className="h-64 flex flex-col items-center justify-center
-                                            text-gray-400 text-sm text-center px-4 gap-2">
-                                <span className="text-2xl">📊</span>
-                                <span>
-                                    {!showState && !showDistrict && selSchools.length === 0
-                                        ? 'Enable State/District lines or select schools.'
-                                        : 'No data for the current selection.'}
-                                </span>
-                            </div>
-                         ) : (
-                            <Plot
-                                data={traces as any}
-                                layout={{
-                                    xaxis: {
-                                        title    : { text: 'School Year', font: { size: 11 } },
-                                        tickmode : 'array',
-                                        tickvals : TICK_VALS,
-                                        ticktext : TICK_TEXTS,
-                                        gridcolor: '#f3f4f6',
-                                        linecolor: '#e5e7eb',
-                                    },
-                                    yaxis: {
-                                        title    : { text: 'Average Scale Score', font: { size: 11 } },
-                                        gridcolor: '#f3f4f6',
-                                        linecolor: '#e5e7eb',
-                                    },
-                                    hovermode    : 'closest',
-                                    showlegend   : false,
-                                    plot_bgcolor : 'white',
-                                    paper_bgcolor: 'white',
-                                    height  : 420,
-                                    margin  : { t: 10, r: 10, b: 55, l: 60 },
-                                    autosize: true,
-                                    font    : { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
-                                }}
-                                style={{ width: '100%' }}
-                                config={{
-                                    responsive: true,
-                                    displayModeBar: false,
-                                    modeBarButtonsToRemove: ['select2d', 'lasso2d', 'autoScale2d'],
-                                    toImageButtonOptions: {
-                                        format: 'png', filename: `NDE_District66_${subject}`, scale: 2,
-                                    },
-                                }}
-                                useResizeHandler={true}
-                            />
-                        )}
-                    </div>
-
-                    {/* Right Panel */}
-                    <div className="w-full lg:w-52 lg:flex-shrink-0 h-full flex flex-col gap-4 overflow-hidden">
-                        <LineStyleLegend viewMode={viewMode} showDistrict66={true} />
-
-                        {/* Removed the conditional check here so container always appears */}
-                        <div className="flex-1 bg-white rounded-2xl border border-gray-100
-                                        shadow-sm p-4 sm:p-5 flex flex-col min-h-0 overflow-hidden">
-                            <p className="text-[11px] font-semibold text-gray-400
-                                        uppercase tracking-widest mb-3 flex-shrink-0">
-                                Selected Schools
-                                <span className="ml-1.5 text-[10px] bg-gray-100 text-gray-500
-                                                px-1.5 py-0.5 rounded-full normal-case
-                                                font-bold tracking-normal">
-                                    {selSchools.length}
-                                </span>
-                            </p>
-                            
-                            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-2">
-                                {selSchools.length > 0 ? (
-                                    selSchools.map(s => (
-                                        <div key={s} className="flex items-center gap-2">
-                                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                                style={{ background: normalizedColorMap[s] || '#aaa' }} />
-                                            <span className="text-xs text-gray-600 truncate">{s}</span>
-                                        </div>
-                                    ))
-                                ) : (
-                                    /* Optional: Placeholder text so the empty container looks intentional */
-                                    /* Placeholder when nothing is selected */
-                                    <div className="flex flex-col items-center justify-center h-full text-center opacity-40 grayscale">
-                                        <School size={24} className="text-gray-300 mb-2" />
-                                        <p className="text-[10px] text-gray-400 font-medium leading-tight">
-                                            No schools<br/>selected
-                                        </p>
+                        {/* Top / Bottom performers */}
+                        {eSorted.length > 0 && (
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-5">
+                                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <TrendingUp className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                                        <p className="text-sm font-semibold text-gray-800">Top Overperformers</p>
                                     </div>
-                                )}
+                                    <p className="text-[11px] text-gray-400 mb-4">
+                                        Schools scoring above expectations for their FRL rate
+                                    </p>
+                                    <div className="flex flex-col gap-2">
+                                        {eTop.map((d, i) => (
+                                            <div key={d.name} className="flex items-center justify-between
+                                                                          py-2.5 px-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <span className="text-xs font-bold text-emerald-700 w-5 flex-shrink-0">{i + 1}</span>
+                                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                                                    <span className="text-xs text-gray-700 font-medium truncate">{d.name}</span>
+                                                </div>
+                                                <div className="text-right flex-shrink-0 ml-3">
+                                                    <p className="text-xs font-bold text-emerald-700">+{d.gap.toFixed(1)} pts</p>
+                                                    <p className="text-[10px] text-gray-400">{(d.x as number).toFixed(0)}% FRL</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <TrendingDown className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                        <p className="text-sm font-semibold text-gray-800">Underperformers</p>
+                                    </div>
+                                    <p className="text-[11px] text-gray-400 mb-4">
+                                        Schools scoring below expectations for their FRL rate
+                                    </p>
+                                    <div className="flex flex-col gap-2">
+                                        {eBottom.map((d, i) => (
+                                            <div key={d.name} className="flex items-center justify-between
+                                                                          py-2.5 px-3 rounded-xl bg-red-50 border border-red-100">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <span className="text-xs font-bold text-red-500 w-5 flex-shrink-0">{i + 1}</span>
+                                                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
+                                                    <span className="text-xs text-gray-700 font-medium truncate">{d.name}</span>
+                                                </div>
+                                                <div className="text-right flex-shrink-0 ml-3">
+                                                    <p className="text-xs font-bold text-red-500">{d.gap.toFixed(1)} pts</p>
+                                                    <p className="text-[10px] text-gray-400">{(d.x as number).toFixed(0)}% FRL</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {/* ── No-FRL callout ──────────────────────────────────────────────── */}
+                        {eNoFrl.length > 0 && (
+                            <div className="mt-5 bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5">
+                                <div className="flex items-start gap-3">
+                                    <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-amber-800 mb-1">
+                                            {eNoFrl.length === 1
+                                                ? '1 school excluded from chart'
+                                                : `${eNoFrl.length} schools excluded from chart`}
+                                        </p>
+                                        <p className="text-[11px] text-amber-700 mb-3">
+                                            FRL poverty data is unavailable for the following{' '}
+                                            {eNoFrl.length === 1 ? 'school' : 'schools'} in {eYearLabel}.
+                                            Score data is present — the school{eNoFrl.length > 1 ? 's' : ''} cannot
+                                            be plotted without an x-axis value.
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {eNoFrl.map(d => (
+                                                <div key={d.name}
+                                                     className="flex items-center gap-2 bg-white border border-amber-200
+                                                                rounded-lg px-3 py-1.5">
+                                                    <div className="w-2 h-2 rounded-full flex-shrink-0"
+                                                         style={{ background: d.color }} />
+                                                    <span className="text-xs font-medium text-gray-700">{d.name}</span>
+                                                    <span className="text-[10px] text-gray-400">
+                                                        avg {d.y.toFixed(0)} · Grade{d.gradesPresent.includes(',') ? 's' : ''} {d.gradesPresent}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
-                </div>
+                )}
+
             </main>
         </div>
     )

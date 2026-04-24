@@ -69,8 +69,10 @@ export default function EquityPage() {
         }))
     }, [frlData])
 
+    // Replace districtScores useMemo entirely:
     const districtScores = useMemo(() => {
-        if (!allData) return {}
+        if (!allData) return {} as Record<string, { score: number; gradesPresent: string }>
+
         const source = subject === 'Mathematics' ? allData.math : allData.english
         const rows = source.filter(r =>
             r.level         === 'DI'  &&
@@ -78,15 +80,25 @@ export default function EquityPage() {
             selGrades.includes(r.grade) &&
             String(getYear(r.school_year)) === selYear
         )
-        const byDist: Record<string, { scores: number[]; counts: number[] }> = {}
+
+        const byDist: Record<string, { scores: number[]; counts: number[]; grades: Set<string> }> = {}
         rows.forEach(r => {
-            if (!byDist[r.agency_name]) byDist[r.agency_name] = { scores: [], counts: [] }
-            byDist[r.agency_name].scores.push(parseFloat(r.avg_scale_score))
-            byDist[r.agency_name].counts.push(parseFloat(r.count_tested) || 1)
+            const score = parseFloat(r.avg_scale_score)
+            const count = parseFloat(r.count_tested) || 1
+            if (!isFinite(score) || score <= 0) return          // skip invalid rows
+            if (!byDist[r.agency_name]) byDist[r.agency_name] = { scores: [], counts: [], grades: new Set() }
+            byDist[r.agency_name].scores.push(score)
+            byDist[r.agency_name].counts.push(count)
+            byDist[r.agency_name].grades.add(r.grade)           // track only valid-score grades
         })
-        const result: Record<string, number> = {}
-        Object.entries(byDist).forEach(([name, { scores, counts }]) => {
-            result[name] = weightedAvg(scores, counts)
+
+        const result: Record<string, { score: number; gradesPresent: string }> = {}
+        Object.entries(byDist).forEach(([name, { scores, counts, grades }]) => {
+            const gradesPresent = [...grades]
+                .sort()
+                .map(g => parseInt(g).toString())
+                .join(', ')
+            result[name] = { score: weightedAvg(scores, counts), gradesPresent }
         })
         return result
     }, [allData, subject, selGrades, selYear])
@@ -106,14 +118,22 @@ export default function EquityPage() {
     const scatterPoints = useMemo(() => {
         return Object.entries(districtScores)
             .filter(([name]) => districtFrl[name] != null && !isNaN(districtFrl[name]))
-            .map(([name, score]) => ({
-                name,
-                x    : districtFrl[name],
-                y    : score,
-                color: colorMap[name] || '#94a3b8',
-            }))
+            .map(([name, { score, gradesPresent }]) => {
+                const gradesUsed    = gradesPresent.split(', ').length
+                const totalSelected = selGrades.length
+                return {
+                    name,
+                    x           : districtFrl[name],
+                    y           : score,
+                    color       : colorMap[name] || '#94a3b8',
+                    gradesPresent,
+                    gradesUsed,
+                    totalSelected,
+                    isPartial   : gradesUsed < totalSelected,
+                }
+            })
             .filter(p => p.y > 0)
-    }, [districtScores, districtFrl, colorMap])
+    }, [districtScores, districtFrl, colorMap, selGrades])
 
     const regression = useMemo(() => {
         if (scatterPoints.length < 3) return null
@@ -131,41 +151,84 @@ export default function EquityPage() {
     const traces = useMemo(() => {
         if (!withGap.length) return []
 
-        const scatter = {
-            type      : 'scatter',
-            mode      : 'markers',
-            x         : withGap.map(p => p.x),
-            y         : withGap.map(p => p.y),
-            text      : withGap.map(p => p.name),
-            customdata: withGap.map(p => [p.gap.toFixed(1), p.predicted.toFixed(1)]),
-            marker    : {
-                size   : 10,
-                color  : withGap.map(p => p.color),
-                opacity: 0.85,
-                line   : { width: 1.5, color: '#fff' },
-            },
-            hovertemplate:
-                '<b>%{text}</b><br>' +
-                'FRL: %{x:.1f}%<br>' +
-                'Score: %{y:.1f}<br>' +
-                'Predicted: %{customdata[1]}<br>' +
-                'Difference from expected: <b>%{customdata[0]}</b>',
-            showlegend: false,
+        const fullPoints    = withGap.filter(p => !p.isPartial)
+        const partialPoints = withGap.filter(p => p.isPartial)
+        const result: object[] = []
+
+        if (fullPoints.length > 0) {
+            result.push({
+                type      : 'scatter',
+                mode      : 'markers',
+                x         : fullPoints.map(p => p.x),
+                y         : fullPoints.map(p => p.y),
+                text      : fullPoints.map(p => p.name),
+                customdata: fullPoints.map(p => [
+                    p.gap.toFixed(1),
+                    p.predicted.toFixed(1),
+                    p.gradesPresent,
+                    p.gradesUsed,
+                    p.totalSelected,
+                ]),
+                marker: {
+                    size   : 10,
+                    color  : fullPoints.map(p => p.color),
+                    opacity: 0.85,
+                    line   : { width: 1.5, color: '#fff' },
+                },
+                hovertemplate:
+                    '<b>%{text}</b><br>' +
+                    'FRL: %{x:.1f}%<br>' +
+                    'Score: %{y:.1f}<br>' +
+                    'Predicted: %{customdata[1]}<br>' +
+                    'vs. Expected: <b>%{customdata[0]}</b><br>' +
+                    'Weighted avg of Grade(s): %{customdata[2]}' +
+                    '<extra></extra>',
+                showlegend: false,
+            })
         }
 
-        const result: object[] = [scatter]
+        if (partialPoints.length > 0) {
+            result.push({
+                type      : 'scatter',
+                mode      : 'markers',
+                x         : partialPoints.map(p => p.x),
+                y         : partialPoints.map(p => p.y),
+                text      : partialPoints.map(p => p.name),
+                customdata: partialPoints.map(p => [
+                    p.gap.toFixed(1),
+                    p.predicted.toFixed(1),
+                    p.gradesPresent,
+                    p.gradesUsed,
+                    p.totalSelected,
+                ]),
+                marker: {
+                    size   : 10,
+                    color  : partialPoints.map(p => p.color),
+                    opacity: 0.45,
+                    symbol : 'circle-open',
+                    line   : { width: 2.5, color: partialPoints.map(p => p.color) },
+                },
+                hovertemplate:
+                    '<b>%{text}</b><br>' +
+                    'FRL: %{x:.1f}%<br>' +
+                    'Score: %{y:.1f}<br>' +
+                    'Predicted: %{customdata[1]}<br>' +
+                    'vs. Expected: <b>%{customdata[0]}</b><br>' +
+                    'Weighted avg of Grade(s): %{customdata[2]}<br>' +
+                    '<i>%{customdata[3]} of %{customdata[4]} selected grades available</i>' +
+                    '<extra></extra>',
+                showlegend: false,
+            })
+        }
 
         if (regression) {
             const xs    = withGap.map(p => p.x)
-            const minX  = Math.min(...xs)
-            const maxX  = Math.max(...xs)
-            const lineX = [minX, maxX]
-            const lineY = lineX.map(x => regression.slope * x + regression.intercept)
+            const lineX = [Math.min(...xs), Math.max(...xs)]
             result.push({
                 type      : 'scatter',
                 mode      : 'lines',
                 x         : lineX,
-                y         : lineY,
+                y         : lineX.map(x => regression.slope * x + regression.intercept),
                 line      : { color: '#94a3b8', width: 1.5, dash: 'dash' },
                 hoverinfo : 'skip',
                 showlegend: false,

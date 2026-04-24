@@ -12,8 +12,8 @@ export async function GET() {
                 district_id,
                 county_id
             FROM frl
-            WHERE level = 'DI'
-            ORDER BY agency_name, school_year
+            WHERE level IN ('DI', 'SC')
+            ORDER BY level, agency_name, school_year
         `)
 
         return NextResponse.json({ frl: result.rows })
