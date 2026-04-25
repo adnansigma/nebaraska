@@ -815,6 +815,32 @@ export default function District66Page() {
                                             Expected trend
                                         </span>
                                     </div>
+                                    {eGrades.length > 1 && (
+                                        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200
+                                                        rounded-lg px-2.5 py-1.5">
+                                            {/* Filled circle */}
+                                            <div className="flex items-center gap-1.5">
+                                                <svg width="12" height="12" viewBox="0 0 12 12">
+                                                    <circle cx="6" cy="6" r="5" fill="#6b7280" />
+                                                </svg>
+                                                <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+                                                    All grades present
+                                                </span>
+                                            </div>
+                                            {/* Divider */}
+                                            <div className="w-px h-3 bg-gray-300" />
+                                            {/* Hollow circle */}
+                                            <div className="flex items-center gap-1.5">
+                                                <svg width="12" height="12" viewBox="0 0 12 12">
+                                                    <circle cx="6" cy="6" r="4.5" fill="none"
+                                                            stroke="#6b7280" strokeWidth="2" />
+                                                </svg>
+                                                <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+                                                    Partial grade data
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

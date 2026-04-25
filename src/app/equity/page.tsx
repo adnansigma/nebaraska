@@ -433,7 +433,7 @@ export default function EquityPage() {
                                                     border border-red-200 rounded-lg px-2.5 py-1.5">
                                         <TrendingDown className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                                         <span className="text-[11px] font-semibold text-red-600 whitespace-nowrap">
-                                            Below line — Underperforming
+                                            Below line — Underperforming 
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 bg-gray-50
@@ -443,6 +443,33 @@ export default function EquityPage() {
                                             Expected trend
                                         </span>
                                     </div>
+                                    {/* ── ADD THIS: marker shape legend, only when partial data exists ── */}
+                                    {selGrades.length > 1 && (
+                                        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200
+                                                        rounded-lg px-2.5 py-1.5">
+                                            {/* Filled circle */}
+                                            <div className="flex items-center gap-1.5">
+                                                <svg width="12" height="12" viewBox="0 0 12 12">
+                                                    <circle cx="6" cy="6" r="5" fill="#6b7280" />
+                                                </svg>
+                                                <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+                                                    All grades present
+                                                </span>
+                                            </div>
+                                            {/* Divider */}
+                                            <div className="w-px h-3 bg-gray-300" />
+                                            {/* Hollow circle */}
+                                            <div className="flex items-center gap-1.5">
+                                                <svg width="12" height="12" viewBox="0 0 12 12">
+                                                    <circle cx="6" cy="6" r="4.5" fill="none"
+                                                            stroke="#6b7280" strokeWidth="2" />
+                                                </svg>
+                                                <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+                                                    Partial grade data
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
