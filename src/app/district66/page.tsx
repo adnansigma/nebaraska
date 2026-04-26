@@ -176,7 +176,7 @@ export default function District66Page() {
     // ── Equity tab state ──────────────────────────────────────────────────────
     const [eSubject,     setESubject]     = useState('Mathematics')
     const [eGrades,      setEGrades]      = useState<string[]>(['03'])
-    const [eYear,        setEYear]        = useState<string>('2024')
+    const [eYears, setEYears] = useState<string[]>(['2024'])
 
     useEffect(() => {
         fetchDashboardData()
@@ -262,7 +262,7 @@ export default function District66Page() {
             r.subgroup_type === 'ALL' &&
             r.district_name === DISTRICT_66_NAME &&
             eGrades.includes(r.grade) &&
-            String(getYear(r.school_year)) === eYear
+            eYears.includes(String(getYear(r.school_year)))
         )
         const bySchool: Record<string, { scores: number[]; counts: number[] }> = {}
         rows.forEach(r => {
@@ -281,22 +281,44 @@ export default function District66Page() {
             if (scores.length > 0) result[name] = weightedAvg(scores, counts)
         })
         return result
-    }, [allData, eSubject, eGrades, eYear])
+    }, [allData, eSubject, eGrades, eYears])
 
+    // REPLACE — first section only (keep fuzzy matching below unchanged)
     const schoolFrl = useMemo(() => {
-        const rawMap: Record<string, number> = {}
+        const withCount:    Record<string, { countFrl: number; total: number }> = {}
+        const withoutCount: Record<string, number[]> = {}
+
         frlData
-            .filter(r => r.level === 'SC' && String(getYear(r.school_year)) === eYear)
+            .filter(r => r.level === 'SC' && eYears.includes(String(getYear(r.school_year))))
             .forEach(r => {
                 const normalized = normalizeSchoolName(r.agency_name)
-                rawMap[normalized] = Math.round(parseFloat(r.pct_frl) * 100)
+                const pct        = parseFloat(r.pct_frl)
+                const count      = parseFloat(r.count_frl ?? '')
+
+                if (!isFinite(pct)) return
+
+                if (isFinite(count) && count > 0) {
+                    const total = count / pct
+                    if (!withCount[normalized]) withCount[normalized] = { countFrl: 0, total: 0 }
+                    withCount[normalized].countFrl += count
+                    withCount[normalized].total    += total
+                } else {
+                    if (!withoutCount[normalized]) withoutCount[normalized] = []
+                    withoutCount[normalized].push(Math.round(pct * 100))
+                }
             })
+
+        const rawMap: Record<string, number> = {}
+        Object.entries(withCount).forEach(([name, { countFrl, total }]) => {
+            rawMap[name] = Math.round((countFrl / total) * 100)
+        })
+        Object.entries(withoutCount).forEach(([name, vals]) => {
+            if (rawMap[name] == null)
+                rawMap[name] = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+        })
 
         const frlNames = Object.keys(rawMap)
         const result: Record<string, number> = { ...rawMap }
-
-        // Debug: log what names exist in FRL data
-        console.log('[schoolFrl] FRL names in rawMap:', frlNames)
 
         if (allData) {
             const source = eSubject === 'Mathematics' ? allData.math : allData.english
@@ -310,14 +332,11 @@ export default function District66Page() {
                             r.level         === 'SC' &&
                             r.subgroup_type === 'ALL' &&
                             r.district_name === DISTRICT_66_NAME &&
-                            String(getYear(r.school_year)) === eYear
+                            eYears.includes(String(getYear(r.school_year)))
                         )
                         .map(r => normalizeSchoolName(r.agency_name))
                 )
             ]
-
-            // Debug: log what names exist in score data
-            console.log('[schoolFrl] Score names from allData:', scoreNames)
 
             scoreNames.forEach(scoreName => {
                 if (result[scoreName] != null) return
@@ -339,16 +358,13 @@ export default function District66Page() {
                 })
 
                 if (fuzzyMatch != null) {
-                    console.log(`[schoolFrl] Matched "${scoreName}" -> "${fuzzyMatch}" (${rawMap[fuzzyMatch]}%)`)
                     result[scoreName] = rawMap[fuzzyMatch]
-                } else {
-                    console.warn(`[schoolFrl] NO MATCH for: "${scoreName}" | FRL names: ${frlNames.join(', ')}`)
                 }
             })
         }
 
         return result
-    }, [frlData, eYear, allData, eSubject, eGrades])
+    }, [frlData, eYears, allData, eSubject, eGrades])
 
     // ── eScatterPoints: ALL schools from schoolScores, regardless of FRL match ──
     const eScatterPoints = useMemo(() => {
@@ -365,7 +381,7 @@ export default function District66Page() {
                         r.subgroup_type === 'ALL' &&
                         r.district_name === DISTRICT_66_NAME &&
                         eGrades.includes(r.grade) &&
-                        String(getYear(r.school_year)) === eYear &&
+                        eYears.includes(String(getYear(r.school_year))) &&
                         isFinite(score) && score > 0   // ← only valid-score rows
                     )
                 })
@@ -375,10 +391,6 @@ export default function District66Page() {
                     gradesBySchool[name].add(r.grade)
                 })
         }
-
-        // Debug: log schoolScores keys so we can see which schools have scores
-        console.log('[eScatterPoints] schoolScores keys:', Object.keys(schoolScores))
-        console.log('[eScatterPoints] schoolFrl keys:', Object.keys(schoolFrl))
 
         // Keep ALL schools that have a valid score — filter out NaN/0/undefined
         return Object.entries(schoolScores)
@@ -395,7 +407,6 @@ export default function District66Page() {
                 const totalSelected = eGrades.length
                 const isPartial     = gradesUsed < totalSelected
 
-                console.log(`[eScatterPoints] "${name}" | score=${score.toFixed(1)} | frl=${frl} | hasFrl=${hasFrl} | gradesPresent=${gradesPresent} | isPartial=${isPartial}`)
                 return {
                     name,
                     x           : hasFrl ? frl : null,   // null when no FRL data
@@ -408,7 +419,7 @@ export default function District66Page() {
                     isPartial,
                 }
             })
-    }, [schoolScores, schoolFrl, normalizedColorMap, allData, eSubject, eGrades, eYear])
+    }, [schoolScores, schoolFrl, normalizedColorMap, allData, eSubject, eGrades, eYears])
 
     // Regression only uses schools that have FRL data (need x to draw the line)
     const eRegression = useMemo(() => {
@@ -465,6 +476,7 @@ export default function District66Page() {
                     '<b>%{text}</b><br>' +
                     'FRL: %{x:.0f}%<br>' +
                     'Score: %{y:.1f}<br>' +
+                    'Predicted: %{customdata[1]}<br>' +
                     'vs. Expected: <b>%{customdata[0]}</b><br>' +
                     'Weighted avg of Grade(s): %{customdata[2]}' +
                     '<extra></extra>',
@@ -501,6 +513,7 @@ export default function District66Page() {
                     '<b>%{text}</b><br>' +
                     'FRL: %{x:.0f}%<br>' +
                     'Score: %{y:.1f}<br>' +
+                    'Predicted: %{customdata[1]}<br>' +
                     'vs. Expected: <b>%{customdata[0]}</b><br>' +
                     'Weighted avg of Grade(s): %{customdata[2]}<br>' +
                     '<i>%{customdata[3]} of %{customdata[4]} selected grades available</i>' +
@@ -533,7 +546,10 @@ export default function District66Page() {
         [eWithGap]
     )
     const eTop    = eSorted.slice(0, 3)
-    const eBottom = eSorted.slice(-3).reverse()
+    // Only show bottom if there are enough schools to avoid overlap
+    const eBottom = eSorted.length > 3
+        ? eSorted.slice(-3).reverse()
+        : []
 
     // Schools WITHOUT FRL data — shown in the "no FRL" callout
     const eNoFrl = useMemo(() =>
@@ -542,8 +558,15 @@ export default function District66Page() {
     )
 
     const eGradeLabel = eGrades.length === GRADES.length
-        ? 'All Grades' : eGrades.map(g => `Grade ${parseInt(g)}`).join(', ')
-    const eYearLabel  = eYearOptions.find(y => y.value === eYear)?.label ?? eYear
+        ? 'All Grades'
+        : eGrades.length === 1
+            ? `Grade ${parseInt(eGrades[0])}`
+            : `Grade ${eGrades.map(g => parseInt(g).toString()).join(', ')}`
+    const eYearListLabel = eYears.length === 0
+        ? 'No year selected'
+        : eYears.length === 1
+            ? (eYearOptions.find(y => y.value === eYears[0])?.label ?? eYears[0])
+            : `${eYears.length} Years Avg`
 
     return (
         <div className="min-h-screen bg-[#f4f6f9]">
@@ -776,10 +799,14 @@ export default function District66Page() {
                                 </div>
 
                                 <div className="min-w-[160px]">
-                                    <MultiSelect label="School Year" options={eYearOptions}
-                                        selected={eYear ? [eYear] : []}
-                                        onChange={vals => setEYear(vals[0] ?? eYear)}
-                                        placeholder="Select Year" accentColor="#0f2448" singleSelect={true} />
+                                    <MultiSelect
+                                        label="School Year"
+                                        options={eYearOptions}
+                                        selected={eYears}
+                                        onChange={setEYears}
+                                        placeholder="Select Year(s)"
+                                        accentColor="#0f2448"
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -789,7 +816,7 @@ export default function District66Page() {
                             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                                 <div>
                                     <h3 className="text-sm sm:text-base font-semibold text-gray-800">
-                                        {eSubject} — {eGradeLabel} · {eYearLabel}
+                                        {eSubject} — {eGradeLabel} · {eYearListLabel}
                                     </h3>
                                     <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
                                         Each point is one school &nbsp;·&nbsp;
@@ -939,7 +966,7 @@ export default function District66Page() {
                                         </p>
                                         <p className="text-[11px] text-amber-700 mb-3">
                                             FRL poverty data is unavailable for the following{' '}
-                                            {eNoFrl.length === 1 ? 'school' : 'schools'} in {eYearLabel}.
+                                            {eNoFrl.length === 1 ? 'school' : 'schools'} in {eYearListLabel}.
                                             Score data is present — the school{eNoFrl.length > 1 ? 's' : ''} cannot
                                             be plotted without an x-axis value.
                                         </p>

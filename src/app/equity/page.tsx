@@ -43,7 +43,7 @@ export default function EquityPage() {
 
     const [subject,     setSubject]     = useState('Mathematics')
     const [selGrades,   setSelGrades]   = useState<string[]>(['03'])
-    const [selYear,     setSelYear]     = useState<string>('2024')
+    const [selYears, setSelYears] = useState<string[]>(['2024'])
     const [subjectOpen, setSubjectOpen] = useState(false)
 
     useEffect(() => {
@@ -61,7 +61,11 @@ export default function EquityPage() {
         if (dataLoading || frlData.length === 0) {
             return [{ value: 'loading', label: 'Loading years...' }];
         }
-        const years = [...new Set(frlData.map(r => String(getYear(r.school_year))))]
+        const years = [...new Set(
+            frlData
+                .filter(r => r.level === 'DI')
+                .map(r => String(getYear(r.school_year)))
+        )]
             .sort((a, b) => Number(b) - Number(a))
         return years.map(y => ({
             value: y,
@@ -78,7 +82,7 @@ export default function EquityPage() {
             r.level         === 'DI'  &&
             r.subgroup_type === 'ALL' &&
             selGrades.includes(r.grade) &&
-            String(getYear(r.school_year)) === selYear
+            selYears.includes(String(getYear(r.school_year)))
         )
 
         const byDist: Record<string, { scores: number[]; counts: number[]; grades: Set<string> }> = {}
@@ -101,25 +105,57 @@ export default function EquityPage() {
             result[name] = { score: weightedAvg(scores, counts), gradesPresent }
         })
         return result
-    }, [allData, subject, selGrades, selYear])
+    }, [allData, subject, selGrades, selYears])
 
     const districtFrl = useMemo(() => {
-        const result: Record<string, number> = {}
+        // Separate rows with and without count_frl
+        const withCount:    Record<string, { countFrl: number; total: number }> = {}
+        const withoutCount: Record<string, number[]> = {}
+
         frlData
-            .filter(r => String(getYear(r.school_year)) === selYear)
-            .forEach(r => { 
-                // Multiply by 100 and round to get a clean whole number (1-100)
-                const rawValue = parseFloat(r.pct_frl);
-                result[r.agency_name] = Math.round(rawValue * 100); 
+            .filter(r => r.level === 'DI' && selYears.includes(String(getYear(r.school_year))))
+            .forEach(r => {
+                const pct   = parseFloat(r.pct_frl)
+                const count = parseFloat(r.count_frl ?? '')
+
+                if (!isFinite(pct)) return
+
+                if (isFinite(count) && count > 0) {
+                    // Has count — use weighted approach
+                    const total = count / pct   // derive total enrollment
+                    if (!withCount[r.agency_name])
+                        withCount[r.agency_name] = { countFrl: 0, total: 0 }
+                    withCount[r.agency_name].countFrl += count
+                    withCount[r.agency_name].total    += total
+                } else {
+                    // No count — fall back to simple accumulation
+                    if (!withoutCount[r.agency_name]) withoutCount[r.agency_name] = []
+                    withoutCount[r.agency_name].push(Math.round(pct * 100))
+                }
             })
+
+        const result: Record<string, number> = {}
+
+        // Weighted average for districts that have count_frl
+        Object.entries(withCount).forEach(([name, { countFrl, total }]) => {
+            result[name] = Math.round((countFrl / total) * 100)
+        })
+
+        // Simple average fallback for districts missing count_frl
+        Object.entries(withoutCount).forEach(([name, vals]) => {
+            if (result[name] == null) {   // don't overwrite if already computed above
+                result[name] = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+            }
+        })
+
         return result
-    }, [frlData, selYear])
+    }, [frlData, selYears])
 
     const scatterPoints = useMemo(() => {
         return Object.entries(districtScores)
             .filter(([name]) => districtFrl[name] != null && !isNaN(districtFrl[name]))
             .map(([name, { score, gradesPresent }]) => {
-                const gradesUsed    = gradesPresent.split(', ').length
+                const gradesUsed = gradesPresent ? gradesPresent.split(', ').length : 0
                 const totalSelected = selGrades.length
                 return {
                     name,
@@ -223,7 +259,7 @@ export default function EquityPage() {
 
         if (regression) {
             const xs    = withGap.map(p => p.x)
-            const lineX = [Math.min(...xs), Math.max(...xs)]
+            const lineX = [Math.min(...xs) - 1, Math.max(...xs) + 1]
             result.push({
                 type      : 'scatter',
                 mode      : 'lines',
@@ -240,13 +276,23 @@ export default function EquityPage() {
 
     const sorted          = useMemo(() => [...withGap].sort((a, b) => b.gap - a.gap), [withGap])
     const topDistricts    = sorted.slice(0, 5)
-    const bottomDistricts = sorted.slice(-5).reverse()
+    const bottomDistricts = sorted.length > 5
+        ? sorted.slice(-5).reverse()
+        : []
 
     const gradeLabel = selGrades.length === GRADES.length
         ? 'All Grades'
-        : selGrades.map(g => `Grade ${parseInt(g)}`).join(', ')
+        : selGrades.length === 1
+            ? `Grade ${parseInt(selGrades[0])}`
+            : `Grade ${selGrades.map(g => parseInt(g)).join(', ')}`
 
-    const yearLabel = yearOptions.find(y => y.value === selYear)?.label ?? selYear
+    const yearLabel = selYears.length === 0
+        ? 'No year selected'
+        : selYears.length === 1
+            ? (yearOptions.find(y => y.value === selYears[0])?.label ?? selYears[0])
+            : selYears
+                .map(y => yearOptions.find(o => o.value === y)?.label ?? y)
+                .join(', ')
 
     return (
         <div className="min-h-screen bg-[#f4f6f9]">
@@ -379,11 +425,10 @@ export default function EquityPage() {
                                 <MultiSelect
                                     label="School Year"
                                     options={yearOptions}
-                                    selected={selYear ? [selYear] : []}
-                                    onChange={vals => setSelYear(vals[0] ?? selYear)}
-                                    placeholder="Select Year"
+                                    selected={selYears}
+                                    onChange={setSelYears}
+                                    placeholder="Select Year(s)"
                                     accentColor="#0f2448"
-                                    singleSelect={true}
                                 />
                             )}
                         </div>

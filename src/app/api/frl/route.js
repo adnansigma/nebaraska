@@ -8,6 +8,7 @@ export async function GET() {
                 agency_name,
                 school_year,
                 pct_frl,
+                count_frl,
                 level,
                 district_id,
                 county_id

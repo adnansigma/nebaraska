@@ -24,4 +24,5 @@ export interface FrlRow {
     level      : string
     district_id: string
     county_id  : string
+    count_frl  : string | null
 }
