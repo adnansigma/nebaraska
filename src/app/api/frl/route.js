@@ -12,7 +12,7 @@ export async function GET() {
                 level,
                 district_id,
                 county_id
-            FROM frl
+            FROM frl_scores
             WHERE level IN ('DI', 'SC')
             ORDER BY level, agency_name, school_year
         `)

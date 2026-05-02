@@ -24,17 +24,21 @@ const SUBJECTS         = ['Mathematics', 'English Language Arts']
 type Tab = 'performance' | 'equity'
 
 // ── Linear regression ─────────────────────────────────────────────────────────
-function linearRegression(points: { x: number; y: number }[]) {
-    const n = points.length
+function linearRegression(points: { x: number; y: number; weight?: number }[]) {
+    const n      = points.length
     if (n < 2) return null
-    const sumX  = points.reduce((a, p) => a + p.x, 0)
-    const sumY  = points.reduce((a, p) => a + p.y, 0)
-    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0)
-    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0)
-    const denom = n * sumX2 - sumX * sumX
+
+    const W   = points.reduce((a, p) => a + (p.weight ?? 1), 0)
+    const sumX  = points.reduce((a, p) => a + (p.weight ?? 1) * p.x, 0)
+    const sumY  = points.reduce((a, p) => a + (p.weight ?? 1) * p.y, 0)
+    const sumXY = points.reduce((a, p) => a + (p.weight ?? 1) * p.x * p.y, 0)
+    const sumX2 = points.reduce((a, p) => a + (p.weight ?? 1) * p.x * p.x, 0)
+
+    const denom = W * sumX2 - sumX * sumX
     if (denom === 0) return null
-    const slope     = (n * sumXY - sumX * sumY) / denom
-    const intercept = (sumY - slope * sumX) / n
+
+    const slope     = (W * sumXY - sumX * sumY) / denom
+    const intercept = (sumY - slope * sumX) / W
     return { slope, intercept }
 }
 
@@ -120,7 +124,7 @@ function ShowLinesDropdown({ showState, showDistrict, onToggleState, onToggleDis
     )
 }
 
-// ── Subject Dropdown (reusable) ───────────────────────────────────────────────
+// ── Subject Dropdown ──────────────────────────────────────────────────────────
 function SubjectDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
     const [open, setOpen] = useState(false)
     return (
@@ -166,17 +170,17 @@ export default function District66Page() {
     const [activeTab,         setActiveTab]         = useState<Tab>('performance')
 
     // ── Performance tab state ─────────────────────────────────────────────────
-    const [pSubject,     setPSubject]     = useState('Mathematics')
-    const [pGrades,      setPGrades]      = useState<string[]>(['03'])
-    const [pViewMode,    setPViewMode]    = useState<'all' | 'gender'>('all')
-    const [pSelSchools,  setPSelSchools]  = useState<string[]>([])
-    const [pShowState,   setPShowState]   = useState(true)
-    const [pShowDistrict,setPShowDistrict]= useState(true)
+    const [pSubject,      setPSubject]      = useState('Mathematics')
+    const [pGrades,       setPGrades]       = useState<string[]>(['03'])
+    const [pViewMode,     setPViewMode]     = useState<'all' | 'gender'>('all')
+    const [pSelSchools,   setPSelSchools]   = useState<string[]>([])
+    const [pShowState,    setPShowState]    = useState(true)
+    const [pShowDistrict, setPShowDistrict] = useState(true)
 
     // ── Equity tab state ──────────────────────────────────────────────────────
-    const [eSubject,     setESubject]     = useState('Mathematics')
-    const [eGrades,      setEGrades]      = useState<string[]>(['03'])
-    const [eYears, setEYears] = useState<string[]>(['2024'])
+    const [eSubject, setESubject] = useState('Mathematics')
+    const [eGrades,  setEGrades]  = useState<string[]>(['03'])
+    const [eYears,   setEYears]   = useState<string[]>(['2024'])
 
     useEffect(() => {
         fetchDashboardData()
@@ -267,9 +271,9 @@ export default function District66Page() {
         const bySchool: Record<string, { scores: number[]; counts: number[] }> = {}
         rows.forEach(r => {
             const score = parseFloat(r.avg_scale_score)
-            const count = parseFloat(r.count_tested) || 1
-            // Skip rows where the score is not a valid number
+            const count = parseFloat(r.count_tested)
             if (!isFinite(score) || score <= 0) return
+            if (!isFinite(count) || count <= 0) return 
             const name = normalizeSchoolName(r.agency_name)
             if (!bySchool[name]) bySchool[name] = { scores: [], counts: [] }
             bySchool[name].scores.push(score)
@@ -277,16 +281,20 @@ export default function District66Page() {
         })
         const result: Record<string, number> = {}
         Object.entries(bySchool).forEach(([name, { scores, counts }]) => {
-            // Only set if we have at least one valid score row
             if (scores.length > 0) result[name] = weightedAvg(scores, counts)
         })
         return result
     }, [allData, eSubject, eGrades, eYears])
 
-    // REPLACE — first section only (keep fuzzy matching below unchanged)
+    // ── schoolFrl: weighted avg when count available, simple avg otherwise ────
     const schoolFrl = useMemo(() => {
-        const withCount:    Record<string, { countFrl: number; total: number }> = {}
-        const withoutCount: Record<string, number[]> = {}
+        const accum: Record<string, {
+            weighted: { countFrl: number; total: number; yearCount: number }
+            pctOnly:  number[]
+        }> = {}
+
+        // Deduplicate: one FRL row per school per year
+        const seen = new Set<string>()
 
         frlData
             .filter(r => r.level === 'SC' && eYears.includes(String(getYear(r.school_year))))
@@ -297,34 +305,64 @@ export default function District66Page() {
 
                 if (!isFinite(pct)) return
 
-                if (isFinite(count) && count > 0) {
-                    const total = count / pct
-                    if (!withCount[normalized]) withCount[normalized] = { countFrl: 0, total: 0 }
-                    withCount[normalized].countFrl += count
-                    withCount[normalized].total    += total
+                // Skip duplicate school+year combos
+                const key = `${normalized}__${r.school_year}`
+                if (seen.has(key)) return
+                seen.add(key)
+
+                if (!accum[normalized])
+                    accum[normalized] = { weighted: { countFrl: 0, total: 0, yearCount: 0 }, pctOnly: [] }
+
+                if (isFinite(count) && count > 0 && isFinite(pct) && pct > 0) {
+                    // Reverse-calculate total enrollment: count_frl / pct_frl
+                    const totalEnroll = count / pct
+                    accum[normalized].weighted.countFrl  += count
+                    accum[normalized].weighted.total     += totalEnroll
+                    accum[normalized].weighted.yearCount += 1
                 } else {
-                    if (!withoutCount[normalized]) withoutCount[normalized] = []
-                    withoutCount[normalized].push(Math.round(pct * 100))
+                    // No count available — store raw pct at full precision
+                    accum[normalized].pctOnly.push(pct * 100)
                 }
             })
 
-        const rawMap: Record<string, number> = {}
-        Object.entries(withCount).forEach(([name, { countFrl, total }]) => {
-            rawMap[name] = Math.round((countFrl / total) * 100)
-        })
-        Object.entries(withoutCount).forEach(([name, vals]) => {
-            if (rawMap[name] == null)
-                rawMap[name] = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+        // Build rawMap with correct blending logic
+        const rawMap: Record<string, { pct: number; countFrl: number | null }> = {}
+
+        Object.entries(accum).forEach(([name, { weighted, pctOnly }]) => {
+            const hasWeighted = weighted.total > 0
+            const hasPctOnly  = pctOnly.length > 0
+
+            if (hasWeighted && !hasPctOnly) {
+                // ✅ All years have count_frl → pure weighted average
+                rawMap[name] = {
+                    pct     : (weighted.countFrl / weighted.total) * 100,
+                    countFrl: Math.round(weighted.countFrl),
+                }
+            } else if (hasWeighted && hasPctOnly) {
+                // ⚠️ Mixed years → blend weighted pct + simple pct, weighted by year count
+                const weightedPct = (weighted.countFrl / weighted.total) * 100
+                const simplePct   = pctOnly.reduce((a, b) => a + b, 0) / pctOnly.length
+                const totalYears  = weighted.yearCount + pctOnly.length
+                const blendedPct  = (weightedPct * weighted.yearCount + simplePct * pctOnly.length) / totalYears
+                rawMap[name] = {
+                    pct     : blendedPct,
+                    countFrl: Math.round(weighted.countFrl),
+                }
+            } else {
+                // ❌ No count_frl at all → simple average of pct values
+                rawMap[name] = {
+                    pct     : pctOnly.reduce((a, b) => a + b, 0) / pctOnly.length,
+                    countFrl: null,
+                }
+            }
         })
 
+        // Fuzzy matching for schools whose names differ between score and FRL data
         const frlNames = Object.keys(rawMap)
-        const result: Record<string, number> = { ...rawMap }
+        const result: Record<string, { pct: number; countFrl: number | null }> = { ...rawMap }
 
         if (allData) {
             const source = eSubject === 'Mathematics' ? allData.math : allData.english
-            // FRL is a school-level stat — do NOT filter by eGrades here.
-            // A school like SUNSET may only have grade 3 data but still needs
-            // its FRL value resolved when grades 3+4 are both selected.
             const scoreNames = [
                 ...new Set(
                     source
@@ -340,13 +378,7 @@ export default function District66Page() {
 
             scoreNames.forEach(scoreName => {
                 if (result[scoreName] != null) return
-
                 const scoreWords = scoreName.toLowerCase().split(' ').filter(Boolean)
-
-                // Multiple matching strategies in order of strictness:
-                // 1. First word match
-                // 2. Either name contains the other
-                // 3. Any significant word (3+ chars) shared between names
                 const fuzzyMatch = frlNames.find(frlName => {
                     const frlWords = frlName.toLowerCase().split(' ').filter(Boolean)
                     return (
@@ -356,20 +388,17 @@ export default function District66Page() {
                         scoreWords.some(sw => sw.length >= 3 && frlWords.some(fw => fw === sw))
                     )
                 })
-
-                if (fuzzyMatch != null) {
-                    result[scoreName] = rawMap[fuzzyMatch]
-                }
+                if (fuzzyMatch != null) result[scoreName] = rawMap[fuzzyMatch]
             })
         }
 
         return result
-    }, [frlData, eYears, allData, eSubject, eGrades])
+    }, [frlData, eYears, allData, eSubject])
 
-    // ── eScatterPoints: ALL schools from schoolScores, regardless of FRL match ──
+    // ── eScatterPoints: passes countFrl + totalTested ─────────────────────────
     const eScatterPoints = useMemo(() => {
-        // Track which grades each school has data for
         const gradesBySchool: Record<string, Set<string>> = {}
+        const testedBySchool: Record<string, number>      = {}
 
         if (allData) {
             const source = eSubject === 'Mathematics' ? allData.math : allData.english
@@ -382,22 +411,24 @@ export default function District66Page() {
                         r.district_name === DISTRICT_66_NAME &&
                         eGrades.includes(r.grade) &&
                         eYears.includes(String(getYear(r.school_year))) &&
-                        isFinite(score) && score > 0   // ← only valid-score rows
+                        isFinite(score) && score > 0
                     )
                 })
                 .forEach(r => {
-                    const name = normalizeSchoolName(r.agency_name)
+                    const name  = normalizeSchoolName(r.agency_name)
+                    const count = parseFloat(r.count_tested)
+                    if (!isFinite(count) || count <= 0) return
                     if (!gradesBySchool[name]) gradesBySchool[name] = new Set()
                     gradesBySchool[name].add(r.grade)
+                    testedBySchool[name] = (testedBySchool[name] ?? 0) + count
                 })
         }
 
-        // Keep ALL schools that have a valid score — filter out NaN/0/undefined
         return Object.entries(schoolScores)
             .filter(([, score]) => isFinite(score) && score > 0)
             .map(([name, score]) => {
-                const frl         = schoolFrl[name]
-                const hasFrl      = frl != null && !isNaN(frl)
+                const frlEntry      = schoolFrl[name]
+                const hasFrl        = frlEntry != null && !isNaN(frlEntry.pct)
                 const schoolGrades  = gradesBySchool[name] ?? new Set()
                 const gradesPresent = [...schoolGrades]
                     .sort()
@@ -409,7 +440,7 @@ export default function District66Page() {
 
                 return {
                     name,
-                    x           : hasFrl ? frl : null,   // null when no FRL data
+                    x           : hasFrl ? frlEntry.pct : null,
                     y           : score,
                     hasFrl,
                     color       : normalizedColorMap[name] || '#94a3b8',
@@ -417,15 +448,18 @@ export default function District66Page() {
                     gradesUsed,
                     totalSelected,
                     isPartial,
+                    countFrl    : hasFrl ? frlEntry.countFrl : null,
+                    totalTested : testedBySchool[name] ?? 0,
                 }
             })
     }, [schoolScores, schoolFrl, normalizedColorMap, allData, eSubject, eGrades, eYears])
 
-    // Regression only uses schools that have FRL data (need x to draw the line)
     const eRegression = useMemo(() => {
-        const plottable = eScatterPoints.filter(p => p.hasFrl) as { x: number; y: number }[]
+        const plottable = eScatterPoints.filter(p => p.hasFrl)
         if (plottable.length < 3) return null
-        return linearRegression(plottable)
+        return linearRegression(
+            plottable.map(p => ({ x: p.x as number, y: p.y, weight: p.totalTested }))
+        )
     }, [eScatterPoints])
 
     const eWithGap = useMemo(() => {
@@ -438,17 +472,19 @@ export default function District66Page() {
         })
     }, [eScatterPoints, eRegression])
 
+    // ── eTraces ───────────────────────────────────────────────────────────────
     const eTraces = useMemo(() => {
-        // Only plot schools that have FRL data (need an x value for the scatter)
-        const plottable    = eWithGap.filter(p => p.hasFrl)
-        const fullPoints   = plottable.filter(p => !p.isPartial)
-        const partialPoints= plottable.filter(p => p.isPartial)
+        const plottable     = eWithGap.filter(p => p.hasFrl)
+        const fullPoints    = plottable.filter(p => !p.isPartial)
+        const partialPoints = plottable.filter(p => p.isPartial)
 
         if (!plottable.length) return []
 
         const result: object[] = []
 
-        // Full data points — solid, full opacity
+        const fmtFrl = (p: typeof eWithGap[0]) =>
+            p.countFrl != null ? p.countFrl.toLocaleString() : 'N/A'
+
         if (fullPoints.length > 0) {
             result.push({
                 type        : 'scatter',
@@ -465,6 +501,8 @@ export default function District66Page() {
                     p.gradesPresent,
                     p.gradesUsed,
                     p.totalSelected,
+                    fmtFrl(p),
+                    p.totalTested.toLocaleString(),
                 ]),
                 marker: {
                     size   : 12,
@@ -474,7 +512,9 @@ export default function District66Page() {
                 },
                 hovertemplate:
                     '<b>%{text}</b><br>' +
-                    'FRL: %{x:.0f}%<br>' +
+                    'FRL: %{x:.1f}%<br>' +
+                    'Students on FRL: %{customdata[5]}<br>' +
+                    'Students Tested: %{customdata[6]}<br>' +
                     'Score: %{y:.1f}<br>' +
                     'Predicted: %{customdata[1]}<br>' +
                     'vs. Expected: <b>%{customdata[0]}</b><br>' +
@@ -484,7 +524,6 @@ export default function District66Page() {
             })
         }
 
-        // Partial data points — open circle, lower opacity
         if (partialPoints.length > 0) {
             result.push({
                 type        : 'scatter',
@@ -501,6 +540,8 @@ export default function District66Page() {
                     p.gradesPresent,
                     p.gradesUsed,
                     p.totalSelected,
+                    fmtFrl(p),
+                    p.totalTested.toLocaleString(),
                 ]),
                 marker: {
                     size   : 12,
@@ -511,7 +552,9 @@ export default function District66Page() {
                 },
                 hovertemplate:
                     '<b>%{text}</b><br>' +
-                    'FRL: %{x:.0f}%<br>' +
+                    'FRL: %{x:.1f}%<br>' +
+                    'Students on FRL: %{customdata[5]}<br>' +
+                    'Students Tested: %{customdata[6]}<br>' +
                     'Score: %{y:.1f}<br>' +
                     'Predicted: %{customdata[1]}<br>' +
                     'vs. Expected: <b>%{customdata[0]}</b><br>' +
@@ -522,7 +565,6 @@ export default function District66Page() {
             })
         }
 
-        // Regression trend line
         if (eRegression) {
             const xs    = plottable.map(p => p.x as number)
             const lineX = [Math.min(...xs) - 2, Math.max(...xs) + 2]
@@ -540,18 +582,13 @@ export default function District66Page() {
         return result
     }, [eWithGap, eRegression])
 
-    // Schools with FRL data, sorted by gap — used for Top / Bottom cards
     const eSorted = useMemo(() =>
         [...eWithGap].filter(p => p.hasFrl).sort((a, b) => b.gap - a.gap),
         [eWithGap]
     )
     const eTop    = eSorted.slice(0, 3)
-    // Only show bottom if there are enough schools to avoid overlap
-    const eBottom = eSorted.length > 3
-        ? eSorted.slice(-3).reverse()
-        : []
+    const eBottom = eSorted.length > 3 ? eSorted.slice(-3).reverse() : []
 
-    // Schools WITHOUT FRL data — shown in the "no FRL" callout
     const eNoFrl = useMemo(() =>
         eWithGap.filter(p => !p.hasFrl),
         [eWithGap]
@@ -562,6 +599,7 @@ export default function District66Page() {
         : eGrades.length === 1
             ? `Grade ${parseInt(eGrades[0])}`
             : `Grade ${eGrades.map(g => parseInt(g).toString()).join(', ')}`
+
     const eYearListLabel = eYears.length === 0
         ? 'No year selected'
         : eYears.length === 1
@@ -597,13 +635,11 @@ export default function District66Page() {
                     </Link>
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900">District 66</h1>
-                        <p className="text-sm text-slate-500 mt-0.5">
-                            WESTSIDE COMMUNITY SCHOOLS
-                        </p>
+                        <p className="text-sm text-slate-500 mt-0.5">WESTSIDE COMMUNITY SCHOOLS</p>
                     </div>
                 </div>
 
-                {/* ── Tab Switcher ─────────────────────────────────────────────────── */}
+                {/* Tab Switcher */}
                 <div className="flex gap-1 bg-white border border-gray-200 rounded-2xl p-1.5
                                 shadow-sm mb-6 w-fit">
                     <button
@@ -642,8 +678,7 @@ export default function District66Page() {
                         </p>
 
                         {/* Filter bar */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100
-                                        p-4 sm:p-6 mb-5">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-5">
                             <div className="flex flex-wrap gap-3 items-end">
                                 <SubjectDropdown value={pSubject} onChange={setPSubject} />
 
@@ -723,17 +758,30 @@ export default function District66Page() {
                                  ) : (
                                     <Plot data={traces as any}
                                         layout={{
-                                            xaxis: { title: { text: 'School Year', font: { size: 11 } }, tickmode: 'array',
-                                                tickvals: TICK_VALS, ticktext: TICK_TEXTS, gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
-                                            yaxis: { title: { text: 'Average Scale Score', font: { size: 11 } }, gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
-                                            hovermode: 'closest', showlegend: false,
-                                            plot_bgcolor: 'white', paper_bgcolor: 'white',
-                                            height: 420, margin: { t: 10, r: 10, b: 55, l: 60 },
-                                            autosize: true, font: { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
+                                            xaxis: {
+                                                title    : { text: 'School Year', font: { size: 11 } },
+                                                tickmode : 'array',
+                                                tickvals : TICK_VALS,
+                                                ticktext : TICK_TEXTS,
+                                                gridcolor: '#f3f4f6',
+                                                linecolor: '#e5e7eb',
+                                            },
+                                            yaxis    : { title: { text: 'Average Scale Score', font: { size: 11 } }, gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
+                                            hovermode: 'closest',
+                                            showlegend   : false,
+                                            plot_bgcolor : 'white',
+                                            paper_bgcolor: 'white',
+                                            height  : 420,
+                                            margin  : { t: 10, r: 10, b: 55, l: 60 },
+                                            autosize: true,
+                                            font    : { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
                                         }}
                                         style={{ width: '100%' }}
-                                        config={{ responsive: true, displayModeBar: false,
-                                            toImageButtonOptions: { format: 'png', filename: `NDE_D66_${pSubject}`, scale: 2 } }}
+                                        config={{
+                                            responsive          : true,
+                                            displayModeBar      : false,
+                                            toImageButtonOptions: { format: 'png', filename: `NDE_D66_${pSubject}`, scale: 2 },
+                                        }}
                                         useResizeHandler={true}
                                     />
                                 )}
@@ -788,8 +836,7 @@ export default function District66Page() {
                         </p>
 
                         {/* Filter bar */}
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100
-                                        p-4 sm:p-5 mb-5">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-5 mb-5">
                             <div className="flex flex-wrap gap-4 items-end">
                                 <SubjectDropdown value={eSubject} onChange={setESubject} />
 
@@ -843,9 +890,7 @@ export default function District66Page() {
                                         </span>
                                     </div>
                                     {eGrades.length > 1 && (
-                                        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200
-                                                        rounded-lg px-2.5 py-1.5">
-                                            {/* Filled circle */}
+                                        <div className="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
                                             <div className="flex items-center gap-1.5">
                                                 <svg width="12" height="12" viewBox="0 0 12 12">
                                                     <circle cx="6" cy="6" r="5" fill="#6b7280" />
@@ -854,9 +899,7 @@ export default function District66Page() {
                                                     All grades present
                                                 </span>
                                             </div>
-                                            {/* Divider */}
                                             <div className="w-px h-3 bg-gray-300" />
-                                            {/* Hollow circle */}
                                             <div className="flex items-center gap-1.5">
                                                 <svg width="12" height="12" viewBox="0 0 12 12">
                                                     <circle cx="6" cy="6" r="4.5" fill="none"
@@ -879,18 +922,32 @@ export default function District66Page() {
                              ) : (
                                 <Plot data={eTraces as any}
                                     layout={{
-                                        xaxis: { title: { text: 'Free & Reduced Lunch (%)', font: { size: 11 } },
-                                            gridcolor: '#f3f4f6', linecolor: '#e5e7eb', ticksuffix: '%' },
-                                        yaxis: { title: { text: 'Average Scale Score', font: { size: 11 } },
-                                            gridcolor: '#f3f4f6', linecolor: '#e5e7eb' },
-                                        hovermode: 'closest', showlegend: false,
-                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
-                                        height: 420, margin: { t: 30, r: 20, b: 60, l: 70 },
-                                        autosize: true, font: { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
+                                        xaxis: {
+                                            title    : { text: 'Free & Reduced Lunch (%)', font: { size: 11 } },
+                                            gridcolor: '#f3f4f6',
+                                            linecolor: '#e5e7eb',
+                                            ticksuffix: '%',
+                                        },
+                                        yaxis: {
+                                            title    : { text: 'Average Scale Score', font: { size: 11 } },
+                                            gridcolor: '#f3f4f6',
+                                            linecolor: '#e5e7eb',
+                                        },
+                                        hovermode    : 'closest',
+                                        showlegend   : false,
+                                        plot_bgcolor : 'white',
+                                        paper_bgcolor: 'white',
+                                        height  : 420,
+                                        margin  : { t: 30, r: 20, b: 60, l: 70 },
+                                        autosize: true,
+                                        font    : { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
                                     }}
                                     style={{ width: '100%' }}
-                                    config={{ responsive: true, displayModeBar: false,
-                                        toImageButtonOptions: { format: 'png', filename: `NDE_D66_Equity_${eSubject}`, scale: 2 } }}
+                                    config={{
+                                        responsive          : true,
+                                        displayModeBar      : false,
+                                        toImageButtonOptions: { format: 'png', filename: `NDE_D66_Equity_${eSubject}`, scale: 2 },
+                                    }}
                                     useResizeHandler={true}
                                 />
                             )}
@@ -909,8 +966,9 @@ export default function District66Page() {
                                     </p>
                                     <div className="flex flex-col gap-2">
                                         {eTop.map((d, i) => (
-                                            <div key={d.name} className="flex items-center justify-between
-                                                                          py-2.5 px-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                                            <div key={d.name}
+                                                 className="flex items-center justify-between
+                                                            py-2.5 px-3 rounded-xl bg-emerald-50 border border-emerald-100">
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     <span className="text-xs font-bold text-emerald-700 w-5 flex-shrink-0">{i + 1}</span>
                                                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
@@ -935,8 +993,9 @@ export default function District66Page() {
                                     </p>
                                     <div className="flex flex-col gap-2">
                                         {eBottom.map((d, i) => (
-                                            <div key={d.name} className="flex items-center justify-between
-                                                                          py-2.5 px-3 rounded-xl bg-red-50 border border-red-100">
+                                            <div key={d.name}
+                                                 className="flex items-center justify-between
+                                                            py-2.5 px-3 rounded-xl bg-red-50 border border-red-100">
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     <span className="text-xs font-bold text-red-500 w-5 flex-shrink-0">{i + 1}</span>
                                                     <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: d.color }} />
@@ -953,7 +1012,7 @@ export default function District66Page() {
                             </div>
                         )}
 
-                        {/* ── No-FRL callout ──────────────────────────────────────────────── */}
+                        {/* No-FRL callout */}
                         {eNoFrl.length > 0 && (
                             <div className="mt-5 bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5">
                                 <div className="flex items-start gap-3">
@@ -988,7 +1047,6 @@ export default function District66Page() {
                                 </div>
                             </div>
                         )}
-
                     </div>
                 )}
 

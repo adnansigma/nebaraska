@@ -19,19 +19,29 @@ const Plot = dynamic(
 const SUBJECTS = ['Mathematics', 'English Language Arts']
 
 // ── Linear regression ────────────────────────────────────────────────────────
-function linearRegression(points: { x: number; y: number }[]) {
-    const n = points.length
+function linearRegression(points: { x: number; y: number; weight?: number }[]) {
+    const n      = points.length
     if (n < 2) return null
-    const sumX  = points.reduce((a, p) => a + p.x, 0)
-    const sumY  = points.reduce((a, p) => a + p.y, 0)
-    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0)
-    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0)
-    const denom = n * sumX2 - sumX * sumX
+
+    const W   = points.reduce((a, p) => a + (p.weight ?? 1), 0)
+    const sumX  = points.reduce((a, p) => a + (p.weight ?? 1) * p.x, 0)
+    const sumY  = points.reduce((a, p) => a + (p.weight ?? 1) * p.y, 0)
+    const sumXY = points.reduce((a, p) => a + (p.weight ?? 1) * p.x * p.y, 0)
+    const sumX2 = points.reduce((a, p) => a + (p.weight ?? 1) * p.x * p.x, 0)
+
+    const denom = W * sumX2 - sumX * sumX
     if (denom === 0) return null
-    const slope     = (n * sumXY - sumX * sumY) / denom
-    const intercept = (sumY - slope * sumX) / n
+
+    const slope     = (W * sumXY - sumX * sumY) / denom
+    const intercept = (sumY - slope * sumX) / W
     return { slope, intercept }
 }
+const normalizeName = (name: string) =>
+    name
+        .replace(/\d+/g, '')
+        .replace(/\b(PUBLIC SCHOOLS?|SCHOOLS?|SCHOOL|PUBLIC|SCH SYSTEM|SCHS|DIST|R|COMM|DISTRICT)\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim()
 
 // ── Equity Page ──────────────────────────────────────────────────────────────
 export default function EquityPage() {
@@ -41,10 +51,11 @@ export default function EquityPage() {
     const [dataLoading, setDataLoading] = useState(true)
     const [error,       setError]       = useState('')
 
-    const [subject,     setSubject]     = useState('Mathematics')
-    const [selGrades,   setSelGrades]   = useState<string[]>(['03'])
-    const [selYears, setSelYears] = useState<string[]>(['2024'])
-    const [subjectOpen, setSubjectOpen] = useState(false)
+    const [subject,      setSubject]      = useState('Mathematics')
+    const [selGrades,    setSelGrades]    = useState<string[]>(['03'])
+    const [selYears,     setSelYears]     = useState<string[]>(['2024'])
+    const [subjectOpen,  setSubjectOpen]  = useState(false)
+    const [selDistricts, setSelDistricts] = useState<string[]>([])
 
     useEffect(() => {
         fetchDashboardData()
@@ -57,9 +68,20 @@ export default function EquityPage() {
             .catch(e => { setError(e.message); setDataLoading(false) })
     }, [])
 
+    const normalizeName = (name: string) => {
+        return name
+            // 1. Remove numbers/digits
+            .replace(/\d+/g, '') 
+            // 2. Remove specific keywords (cleaned up duplicates)
+            .replace(/\b(PUBLIC SCHOOLS?|SCHOOLS?|SCHOOL|PUBLIC|SCH SYSTEM|SCHS|DIST|R|COMM|DISTRICT)\b/gi, '')
+            // 3. Collapse extra spaces and trim
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
     const yearOptions = useMemo(() => {
         if (dataLoading || frlData.length === 0) {
-            return [{ value: 'loading', label: 'Loading years...' }];
+            return [{ value: 'loading', label: 'Loading years...' }]
         }
         const years = [...new Set(
             frlData
@@ -71,11 +93,11 @@ export default function EquityPage() {
             value: y,
             label: TICK_TEXTS[TICK_VALS.indexOf(Number(y))] ?? y,
         }))
-    }, [frlData])
+    }, [frlData, dataLoading])
 
-    // Replace districtScores useMemo entirely:
+    // ── districtScores ────────────────────────────────────────────────────────
     const districtScores = useMemo(() => {
-        if (!allData) return {} as Record<string, { score: number; gradesPresent: string }>
+        if (!allData) return {} as Record<string, { score: number; gradesPresent: string; totalTested: number }>
 
         const source = subject === 'Mathematics' ? allData.math : allData.english
         const rows = source.filter(r =>
@@ -85,32 +107,48 @@ export default function EquityPage() {
             selYears.includes(String(getYear(r.school_year)))
         )
 
-        const byDist: Record<string, { scores: number[]; counts: number[]; grades: Set<string> }> = {}
+        const byDist: Record<string, {
+            scores: number[]
+            counts: number[]
+            grades: Set<string>
+            totalTested: number
+        }> = {}
+
         rows.forEach(r => {
             const score = parseFloat(r.avg_scale_score)
-            const count = parseFloat(r.count_tested) || 1
-            if (!isFinite(score) || score <= 0) return          // skip invalid rows
-            if (!byDist[r.agency_name]) byDist[r.agency_name] = { scores: [], counts: [], grades: new Set() }
-            byDist[r.agency_name].scores.push(score)
-            byDist[r.agency_name].counts.push(count)
-            byDist[r.agency_name].grades.add(r.grade)           // track only valid-score grades
+            const count = parseFloat(r.count_tested)
+            if (!isFinite(count) || count <= 0) return
+            if (!isFinite(score) || score <= 0) return
+            const normName = normalizeName(r.agency_name)
+            if (!byDist[normName])
+                byDist[normName] = { scores: [], counts: [], grades: new Set(), totalTested: 0 }
+            byDist[normName].scores.push(score)
+            byDist[normName].counts.push(count)
+            byDist[normName].grades.add(r.grade)
+            byDist[normName].totalTested += count
         })
 
-        const result: Record<string, { score: number; gradesPresent: string }> = {}
-        Object.entries(byDist).forEach(([name, { scores, counts, grades }]) => {
+        const result: Record<string, { score: number; gradesPresent: string; totalTested: number }> = {}
+        Object.entries(byDist).forEach(([name, { scores, counts, grades, totalTested }]) => {
             const gradesPresent = [...grades]
                 .sort()
                 .map(g => parseInt(g).toString())
                 .join(', ')
-            result[name] = { score: weightedAvg(scores, counts), gradesPresent }
+            result[name] = {
+                score       : weightedAvg(scores, counts),
+                gradesPresent,
+                totalTested : Math.round(totalTested),
+            }
         })
         return result
     }, [allData, subject, selGrades, selYears])
 
+    // ── districtFrl ───────────────────────────────────────────────────────────
     const districtFrl = useMemo(() => {
-        // Separate rows with and without count_frl
-        const withCount:    Record<string, { countFrl: number; total: number }> = {}
-        const withoutCount: Record<string, number[]> = {}
+        const accum: Record<string, {
+            weighted: { countFrl: number; total: number; yearCount: number }
+            pctOnly:  number[]
+        }> = {}
 
         frlData
             .filter(r => r.level === 'DI' && selYears.includes(String(getYear(r.school_year))))
@@ -120,52 +158,79 @@ export default function EquityPage() {
 
                 if (!isFinite(pct)) return
 
-                if (isFinite(count) && count > 0) {
-                    // Has count — use weighted approach
-                    const total = count / pct   // derive total enrollment
-                    if (!withCount[r.agency_name])
-                        withCount[r.agency_name] = { countFrl: 0, total: 0 }
-                    withCount[r.agency_name].countFrl += count
-                    withCount[r.agency_name].total    += total
+                const normName = normalizeName(r.agency_name)
+                if (!accum[normName])
+                    accum[normName] = { weighted: { countFrl: 0, total: 0, yearCount: 0 }, pctOnly: [] }
+
+                if (isFinite(count) && count > 0 && isFinite(pct) && pct > 0) {
+                    const totalEnroll = count / pct
+                    accum[normName].weighted.countFrl  += count
+                    accum[normName].weighted.total     += totalEnroll
+                    accum[normName].weighted.yearCount += 1
                 } else {
-                    // No count — fall back to simple accumulation
-                    if (!withoutCount[r.agency_name]) withoutCount[r.agency_name] = []
-                    withoutCount[r.agency_name].push(Math.round(pct * 100))
+                    accum[normName].pctOnly.push(pct * 100)
                 }
             })
 
-        const result: Record<string, number> = {}
+        const result: Record<string, { pct: number; countFrl: number | null }> = {}
 
-        // Weighted average for districts that have count_frl
-        Object.entries(withCount).forEach(([name, { countFrl, total }]) => {
-            result[name] = Math.round((countFrl / total) * 100)
-        })
+        Object.entries(accum).forEach(([name, { weighted, pctOnly }]) => {
+            const hasWeighted = weighted.total > 0
+            const hasPctOnly  = pctOnly.length > 0
 
-        // Simple average fallback for districts missing count_frl
-        Object.entries(withoutCount).forEach(([name, vals]) => {
-            if (result[name] == null) {   // don't overwrite if already computed above
-                result[name] = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+            if (hasWeighted && !hasPctOnly) {
+                // ✅ All years have count_frl → pure weighted average
+                result[name] = {
+                    pct     : (weighted.countFrl / weighted.total) * 100,
+                    countFrl: Math.round(weighted.countFrl),
+                }
+            } else if (hasWeighted && hasPctOnly) {
+                // ⚠️ Mixed years → blend weighted by year count
+                const weightedPct = (weighted.countFrl / weighted.total) * 100
+                const simplePct   = pctOnly.reduce((a, b) => a + b, 0) / pctOnly.length
+                const totalYears  = weighted.yearCount + pctOnly.length
+                const blendedPct  = (weightedPct * weighted.yearCount + simplePct * pctOnly.length) / totalYears
+                result[name] = {
+                    pct     : blendedPct,
+                    countFrl: Math.round(weighted.countFrl),
+                }
+            } else {
+                // ❌ No count_frl at all → simple average of pct values
+                result[name] = {
+                    pct     : pctOnly.reduce((a, b) => a + b, 0) / pctOnly.length,
+                    countFrl: null,
+                }
             }
         })
 
         return result
     }, [frlData, selYears])
 
+    const districtOptions = useMemo(() => {
+        return Object.keys(districtScores)
+            .sort()
+            .map(name => ({ value: name, label: name }))
+    }, [districtScores])
+
+    // ── scatterPoints ─────────────────────────────────────────────────────────
     const scatterPoints = useMemo(() => {
         return Object.entries(districtScores)
-            .filter(([name]) => districtFrl[name] != null && !isNaN(districtFrl[name]))
-            .map(([name, { score, gradesPresent }]) => {
-                const gradesUsed = gradesPresent ? gradesPresent.split(', ').length : 0
+            .filter(([name]) => districtFrl[name] != null && !isNaN(districtFrl[name].pct))
+            .map(([name, { score, gradesPresent, totalTested }]) => {
+                const { pct, countFrl } = districtFrl[name]
+                const gradesUsed    = gradesPresent ? gradesPresent.split(', ').length : 0
                 const totalSelected = selGrades.length
                 return {
                     name,
-                    x           : districtFrl[name],
+                    x           : pct,
                     y           : score,
-                    color       : colorMap[name] || '#94a3b8',
+                    color: Object.entries(colorMap).find(([k]) => normalizeName(k) === name)?.[1] || '#94a3b8',
                     gradesPresent,
                     gradesUsed,
                     totalSelected,
                     isPartial   : gradesUsed < totalSelected,
+                    countFrl,
+                    totalTested,
                 }
             })
             .filter(p => p.y > 0)
@@ -173,7 +238,9 @@ export default function EquityPage() {
 
     const regression = useMemo(() => {
         if (scatterPoints.length < 3) return null
-        return linearRegression(scatterPoints)
+        return linearRegression(
+            scatterPoints.map(p => ({ x: p.x, y: p.y, weight: p.totalTested }))
+        )
     }, [scatterPoints])
 
     const withGap = useMemo(() => {
@@ -184,12 +251,26 @@ export default function EquityPage() {
         })
     }, [scatterPoints, regression])
 
+    // ── traces ────────────────────────────────────────────────────────────────
     const traces = useMemo(() => {
         if (!withGap.length) return []
 
         const fullPoints    = withGap.filter(p => !p.isPartial)
         const partialPoints = withGap.filter(p => p.isPartial)
         const result: object[] = []
+
+        const highlightColor = (points: typeof withGap) =>
+            points.map(p =>
+                selDistricts.length === 0 || selDistricts.includes(p.name)
+                    ? p.color
+                    : '#d1d5db'
+            )
+
+        const highlightOpacity = (p: typeof withGap[0]) =>
+            selDistricts.length === 0 || selDistricts.includes(p.name) ? 0.85 : 0.25
+
+        const fmtFrl = (p: typeof withGap[0]) =>
+            p.countFrl != null ? p.countFrl.toLocaleString() : 'N/A'
 
         if (fullPoints.length > 0) {
             result.push({
@@ -204,16 +285,26 @@ export default function EquityPage() {
                     p.gradesPresent,
                     p.gradesUsed,
                     p.totalSelected,
+                    fmtFrl(p),
+                    p.totalTested.toLocaleString(),
                 ]),
                 marker: {
-                    size   : 10,
-                    color  : fullPoints.map(p => p.color),
-                    opacity: 0.85,
-                    line   : { width: 1.5, color: '#fff' },
+                    size   : fullPoints.map(p =>
+                        selDistricts.length > 0 && selDistricts.includes(p.name) ? 14 : 10),
+                    color  : highlightColor(fullPoints),
+                    opacity: fullPoints.map(p => highlightOpacity(p)),
+                    line   : {
+                        width: fullPoints.map(p =>
+                            selDistricts.length > 0 && selDistricts.includes(p.name) ? 2.5 : 1.5),
+                        color: fullPoints.map(p =>
+                            selDistricts.length > 0 && selDistricts.includes(p.name) ? '#1a3353' : '#fff'),
+                    },
                 },
                 hovertemplate:
                     '<b>%{text}</b><br>' +
                     'FRL: %{x:.1f}%<br>' +
+                    'Students on FRL: %{customdata[5]}<br>' +
+                    'Students Tested: %{customdata[6]}<br>' +
                     'Score: %{y:.1f}<br>' +
                     'Predicted: %{customdata[1]}<br>' +
                     'vs. Expected: <b>%{customdata[0]}</b><br>' +
@@ -236,17 +327,26 @@ export default function EquityPage() {
                     p.gradesPresent,
                     p.gradesUsed,
                     p.totalSelected,
+                    fmtFrl(p),
+                    p.totalTested.toLocaleString(),
                 ]),
                 marker: {
-                    size   : 10,
-                    color  : partialPoints.map(p => p.color),
-                    opacity: 0.45,
+                    size   : partialPoints.map(p =>
+                        selDistricts.length > 0 && selDistricts.includes(p.name) ? 14 : 10),
+                    color  : highlightColor(partialPoints),
+                    opacity: partialPoints.map(p => highlightOpacity(p)),
                     symbol : 'circle-open',
-                    line   : { width: 2.5, color: partialPoints.map(p => p.color) },
+                    line   : {
+                        width: partialPoints.map(p =>
+                            selDistricts.length > 0 && selDistricts.includes(p.name) ? 3 : 2.5),
+                        color: highlightColor(partialPoints),
+                    },
                 },
                 hovertemplate:
                     '<b>%{text}</b><br>' +
                     'FRL: %{x:.1f}%<br>' +
+                    'Students on FRL: %{customdata[5]}<br>' +
+                    'Students Tested: %{customdata[6]}<br>' +
                     'Score: %{y:.1f}<br>' +
                     'Predicted: %{customdata[1]}<br>' +
                     'vs. Expected: <b>%{customdata[0]}</b><br>' +
@@ -272,13 +372,11 @@ export default function EquityPage() {
         }
 
         return result
-    }, [withGap, regression])
+    }, [withGap, regression, selDistricts])
 
     const sorted          = useMemo(() => [...withGap].sort((a, b) => b.gap - a.gap), [withGap])
     const topDistricts    = sorted.slice(0, 5)
-    const bottomDistricts = sorted.length > 5
-        ? sorted.slice(-5).reverse()
-        : []
+    const bottomDistricts = sorted.length >= 5 ? sorted.slice(-5).reverse() : []
 
     const gradeLabel = selGrades.length === GRADES.length
         ? 'All Grades'
@@ -342,7 +440,7 @@ export default function EquityPage() {
                         <p className="text-[11px] mt-2 leading-relaxed">
                             <span className="text-red-500 font-semibold">Note:</span>{' '}
                             <span className="text-gray-500">
-                                “Above” or “below” the line compares districts with similar socioeconomic profiles (FRL%).
+                                "Above" or "below" the line compares districts with similar socioeconomic profiles (FRL%).
                                 A district below the line is performing lower than expected relative to similar districts,
                                 not necessarily performing poorly overall.
                             </span>
@@ -413,13 +511,24 @@ export default function EquityPage() {
                             />
                         </div>
 
-                        {/* Year */}
+                        {/* District */}
+                        <div className="min-w-[220px]">
+                            <MultiSelect
+                                label="District"
+                                options={districtOptions}
+                                selected={selDistricts}
+                                onChange={setSelDistricts}
+                                placeholder="Highlight Districts..."
+                                accentColor="#0f2448"
+                            />
+                        </div>
+
                         {/* Year */}
                         <div className="min-w-[160px]">
                             {dataLoading ? (
                                 <div className="animate-pulse">
-                                    <div className="h-3 w-12 bg-gray-200 rounded mb-2" /> {/* Mock Label */}
-                                    <div className="h-11 w-full bg-gray-50 border-2 border-gray-100 rounded-xl" /> {/* Mock Input */}
+                                    <div className="h-3 w-12 bg-gray-200 rounded mb-2" />
+                                    <div className="h-11 w-full bg-gray-50 border-2 border-gray-100 rounded-xl" />
                                 </div>
                             ) : (
                                 <MultiSelect
@@ -432,6 +541,20 @@ export default function EquityPage() {
                                 />
                             )}
                         </div>
+
+                        {/* Clear button */}
+                        {selDistricts.length > 0 && (
+                            <div className="self-end">
+                                <button
+                                    onClick={() => setSelDistricts([])}
+                                    className="h-11 px-5 text-sm rounded-xl font-medium transition-all
+                                            bg-white text-gray-500 border border-gray-200
+                                            hover:border-red-200 hover:bg-red-50 hover:text-red-600 shadow-sm"
+                                >
+                                    Clear
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -448,7 +571,7 @@ export default function EquityPage() {
                         {/* Scatter plot card */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
 
-                            {/* Chart header: title left, legend pills right */}
+                            {/* Chart header */}
                             <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                                 <div>
                                     <h3 className="text-sm sm:text-base font-semibold text-gray-800">
@@ -465,7 +588,7 @@ export default function EquityPage() {
                                     </p>
                                 </div>
 
-                                {/* Legend pills — inline, top-right */}
+                                {/* Legend pills */}
                                 <div className="flex flex-wrap items-center gap-2">
                                     <div className="flex items-center gap-1.5 bg-emerald-50
                                                     border border-emerald-200 rounded-lg px-2.5 py-1.5">
@@ -478,7 +601,7 @@ export default function EquityPage() {
                                                     border border-red-200 rounded-lg px-2.5 py-1.5">
                                         <TrendingDown className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
                                         <span className="text-[11px] font-semibold text-red-600 whitespace-nowrap">
-                                            Below line — Underperforming 
+                                            Below line — Underperforming
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-1.5 bg-gray-50
@@ -488,11 +611,9 @@ export default function EquityPage() {
                                             Expected trend
                                         </span>
                                     </div>
-                                    {/* ── ADD THIS: marker shape legend, only when partial data exists ── */}
                                     {selGrades.length > 1 && (
                                         <div className="flex items-center gap-3 bg-gray-50 border border-gray-200
                                                         rounded-lg px-2.5 py-1.5">
-                                            {/* Filled circle */}
                                             <div className="flex items-center gap-1.5">
                                                 <svg width="12" height="12" viewBox="0 0 12 12">
                                                     <circle cx="6" cy="6" r="5" fill="#6b7280" />
@@ -501,9 +622,7 @@ export default function EquityPage() {
                                                     All grades present
                                                 </span>
                                             </div>
-                                            {/* Divider */}
                                             <div className="w-px h-3 bg-gray-300" />
-                                            {/* Hollow circle */}
                                             <div className="flex items-center gap-1.5">
                                                 <svg width="12" height="12" viewBox="0 0 12 12">
                                                     <circle cx="6" cy="6" r="4.5" fill="none"
@@ -528,9 +647,9 @@ export default function EquityPage() {
                                     data={traces as any}
                                     layout={{
                                         xaxis: {
-                                            title    : { text: 'Free & Reduced Lunch (%)', font: { size: 11 } },
-                                            gridcolor: '#f3f4f6',
-                                            linecolor: '#e5e7eb',
+                                            title     : { text: 'Free & Reduced Lunch (%)', font: { size: 11 } },
+                                            gridcolor : '#f3f4f6',
+                                            linecolor : '#e5e7eb',
                                             ticksuffix: '%',
                                         },
                                         yaxis: {
