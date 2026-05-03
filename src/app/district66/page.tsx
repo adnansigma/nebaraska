@@ -24,21 +24,17 @@ const SUBJECTS         = ['Mathematics', 'English Language Arts']
 type Tab = 'performance' | 'equity'
 
 // ── Linear regression ─────────────────────────────────────────────────────────
-function linearRegression(points: { x: number; y: number; weight?: number }[]) {
-    const n      = points.length
+function linearRegression(points: { x: number; y: number }[]) {
+    const n = points.length
     if (n < 2) return null
-
-    const W   = points.reduce((a, p) => a + (p.weight ?? 1), 0)
-    const sumX  = points.reduce((a, p) => a + (p.weight ?? 1) * p.x, 0)
-    const sumY  = points.reduce((a, p) => a + (p.weight ?? 1) * p.y, 0)
-    const sumXY = points.reduce((a, p) => a + (p.weight ?? 1) * p.x * p.y, 0)
-    const sumX2 = points.reduce((a, p) => a + (p.weight ?? 1) * p.x * p.x, 0)
-
-    const denom = W * sumX2 - sumX * sumX
+    const sumX  = points.reduce((a, p) => a + p.x, 0)
+    const sumY  = points.reduce((a, p) => a + p.y, 0)
+    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0)
+    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0)
+    const denom = n * sumX2 - sumX * sumX
     if (denom === 0) return null
-
-    const slope     = (W * sumXY - sumX * sumY) / denom
-    const intercept = (sumY - slope * sumX) / W
+    const slope     = (n * sumXY - sumX * sumY) / denom
+    const intercept = (sumY - slope * sumX) / n
     return { slope, intercept }
 }
 
@@ -271,9 +267,8 @@ export default function District66Page() {
         const bySchool: Record<string, { scores: number[]; counts: number[] }> = {}
         rows.forEach(r => {
             const score = parseFloat(r.avg_scale_score)
-            const count = parseFloat(r.count_tested)
+            const count = parseFloat(r.count_tested) || 1
             if (!isFinite(score) || score <= 0) return
-            if (!isFinite(count) || count <= 0) return 
             const name = normalizeSchoolName(r.agency_name)
             if (!bySchool[name]) bySchool[name] = { scores: [], counts: [] }
             bySchool[name].scores.push(score)
@@ -313,7 +308,7 @@ export default function District66Page() {
                 if (!accum[normalized])
                     accum[normalized] = { weighted: { countFrl: 0, total: 0, yearCount: 0 }, pctOnly: [] }
 
-                if (isFinite(count) && count > 0 && isFinite(pct) && pct > 0) {
+                if (isFinite(count) && count > 0) {
                     // Reverse-calculate total enrollment: count_frl / pct_frl
                     const totalEnroll = count / pct
                     accum[normalized].weighted.countFrl  += count
@@ -416,8 +411,7 @@ export default function District66Page() {
                 })
                 .forEach(r => {
                     const name  = normalizeSchoolName(r.agency_name)
-                    const count = parseFloat(r.count_tested)
-                    if (!isFinite(count) || count <= 0) return
+                    const count = parseFloat(r.count_tested) || 0
                     if (!gradesBySchool[name]) gradesBySchool[name] = new Set()
                     gradesBySchool[name].add(r.grade)
                     testedBySchool[name] = (testedBySchool[name] ?? 0) + count
@@ -455,11 +449,10 @@ export default function District66Page() {
     }, [schoolScores, schoolFrl, normalizedColorMap, allData, eSubject, eGrades, eYears])
 
     const eRegression = useMemo(() => {
-        const plottable = eScatterPoints.filter(p => p.hasFrl)
+        const plottable = eScatterPoints
+            .filter((p): p is typeof p & { x: number } => p.hasFrl && p.x !== null)
         if (plottable.length < 3) return null
-        return linearRegression(
-            plottable.map(p => ({ x: p.x as number, y: p.y, weight: p.totalTested }))
-        )
+        return linearRegression(plottable)
     }, [eScatterPoints])
 
     const eWithGap = useMemo(() => {

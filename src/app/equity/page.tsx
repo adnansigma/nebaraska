@@ -19,15 +19,15 @@ const Plot = dynamic(
 const SUBJECTS = ['Mathematics', 'English Language Arts']
 
 // ── Linear regression ────────────────────────────────────────────────────────
-function linearRegression(points: { x: number; y: number; weight?: number }[]) {
-    const n      = points.length
+function linearRegression(points: { x: number; y: number }[]) {
+    const n = points.length
     if (n < 2) return null
 
-    const W   = points.reduce((a, p) => a + (p.weight ?? 1), 0)
-    const sumX  = points.reduce((a, p) => a + (p.weight ?? 1) * p.x, 0)
-    const sumY  = points.reduce((a, p) => a + (p.weight ?? 1) * p.y, 0)
-    const sumXY = points.reduce((a, p) => a + (p.weight ?? 1) * p.x * p.y, 0)
-    const sumX2 = points.reduce((a, p) => a + (p.weight ?? 1) * p.x * p.x, 0)
+    const W     = n                                                    // each point weight = 1
+    const sumX  = points.reduce((a, p) => a + p.x, 0)
+    const sumY  = points.reduce((a, p) => a + p.y, 0)
+    const sumXY = points.reduce((a, p) => a + p.x * p.y, 0)
+    const sumX2 = points.reduce((a, p) => a + p.x * p.x, 0)
 
     const denom = W * sumX2 - sumX * sumX
     if (denom === 0) return null
@@ -36,12 +36,6 @@ function linearRegression(points: { x: number; y: number; weight?: number }[]) {
     const intercept = (sumY - slope * sumX) / W
     return { slope, intercept }
 }
-const normalizeName = (name: string) =>
-    name
-        .replace(/\d+/g, '')
-        .replace(/\b(PUBLIC SCHOOLS?|SCHOOLS?|SCHOOL|PUBLIC|SCH SYSTEM|SCHS|DIST|R|COMM|DISTRICT)\b/gi, '')
-        .replace(/\s+/g, ' ')
-        .trim()
 
 // ── Equity Page ──────────────────────────────────────────────────────────────
 export default function EquityPage() {
@@ -239,7 +233,7 @@ export default function EquityPage() {
     const regression = useMemo(() => {
         if (scatterPoints.length < 3) return null
         return linearRegression(
-            scatterPoints.map(p => ({ x: p.x, y: p.y, weight: p.totalTested }))
+            scatterPoints.map(p => ({ x: p.x, y: p.y }))
         )
     }, [scatterPoints])
 
