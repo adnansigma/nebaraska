@@ -766,6 +766,14 @@ export default function EquityPage() {
                     </div>
                 )}
             </main>
+            {/* Footer */}
+            <footer className="mt-12 pb-12 border-t border-gray-200 pt-8 px-4">
+                <div className="max-w-screen-2xl mx-auto text-center">
+                    <p className="text-xs text-gray-400">
+                        &copy; {new Date().getFullYear()} Nebraska Assessment Dashboard
+                    </p>
+                </div>
+            </footer>
         </div>
     )
 }

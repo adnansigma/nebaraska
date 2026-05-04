@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import dynamic from 'next/dynamic'
+import Image from 'next/image';
 import { ChevronDown, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { School, Scale } from 'lucide-react';
@@ -459,7 +460,171 @@ export default function Dashboard() {
                         </div>
                     </div>
                 </div>
+                {/* ── National Context Section ─────────────────────────────────────── */}
+                <div className="mt-6 sm:mt-8">
+
+                    {/* Section Header */}
+                    <div className="mb-4 sm:mb-5">
+                        <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                            Nebraska in a National Context
+                        </h2>
+                        <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                            How does Nebraska's trend compare to the broader national pattern?
+                        </p>
+                    </div>
+
+                    {/* Intro Card */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-7 mb-5">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="flex-shrink-0 w-1 self-stretch rounded-full bg-[#1a3353]" />
+                            <div>
+                                <h3 className="text-sm sm:text-base font-semibold text-gray-800 mb-2">
+                                    The NAEP Evidence: When Digital Adoption Aligns with Score Decline
+                                </h3>
+                                <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+                                    Nebraska's assessment trends don't exist in isolation. Nationally, researchers
+                                    have documented a striking pattern: across all 50 states, NAEP scores in Math
+                                    and Reading rose steadily for years — then plateaued and declined in alignment
+                                    with each state's large-scale digital adoption, not with a single calendar year.
+                                    This <span className="font-semibold text-gray-800">staggered policy adoption</span> design
+                                    provides strong evidence that the timing of digital lock-in, not external factors,
+                                    drives the shift.
+                                </p>
+                                <p className="text-xs sm:text-sm text-gray-500 mt-3 leading-relaxed">
+                                    The charts below show national NAEP averages aligned to each state's digital
+                                    inflection point (Year 0). <span className="text-gray-700 font-medium">2022 data is excluded</span> to
+                                    remove COVID disruption effects. The green trend line shows pre-adoption growth;
+                                    the red shows post-adoption decline.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Stat Pills */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+                            {[
+                                { label: 'Grade 4 Math',    slope: '−1.45 pts/yr' },
+                                { label: 'Grade 4 Reading', slope: '−1.07 pts/yr' },
+                                { label: 'Grade 8 Math',    slope: '−1.81 pts/yr' },
+                                { label: 'Grade 8 Reading', slope: '−1.16 pts/yr' },
+                            ].map(({ label, slope }) => (
+                                <div key={label}
+                                    className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-center">
+                                    <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">
+                                        {label}
+                                    </p>
+                                    <p className="text-base sm:text-lg font-bold text-red-600">
+                                        {slope}
+                                    </p>
+                                    <p className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5">
+                                        post-adoption avg. decline
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Charts Grid */}
+                    <div className="flex flex-col gap-4 sm:gap-5 mb-5">
+
+                        {/* Image 1: Grade 4 Math + Grade 4 Reading */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                            <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3">
+                                Grade 4 — Math &amp; Reading (2022 excluded)
+                            </h4>
+                            <div className="rounded-xl overflow-hidden border border-gray-100 mb-4">
+                                <Image
+                                src="/gradeFour.jpg"
+                                alt="Grade 4 Math and Reading NAEP trends relative to digital adoption"
+                                width={800}
+                                height={500}
+                                className="w-full object-contain"
+                                />
+                            </div>
+                            {/* Pre/Post slopes for Grade 4 */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {[
+                                    { subject: 'Math — Pre-adoption',    value: '+1.07 pts/yr', color: 'emerald' },
+                                    { subject: 'Math — Post-adoption',   value: '−0.38 pts/yr', color: 'red'     },
+                                    { subject: 'Reading — Pre-adoption',  value: '+0.27 pts/yr', color: 'emerald' },
+                                    { subject: 'Reading — Post-adoption', value: '−0.80 pts/yr', color: 'red'     },
+                                ].map(({ subject, value, color }) => (
+                                    <div key={subject}
+                                        className={`rounded-xl px-3 py-2.5 text-center border
+                                            ${color === 'emerald'
+                                                ? 'bg-emerald-50 border-emerald-100'
+                                                : 'bg-red-50 border-red-100'}`}>
+                                        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1 leading-tight">
+                                            {subject}
+                                        </p>
+                                        <p className={`text-sm font-bold
+                                            ${color === 'emerald' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                            {value}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Image 2: Grade 8 Math + Grade 8 Reading */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                            <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-3">
+                                Grade 8 — Math &amp; Reading (2022 excluded)
+                            </h4>
+                            <div className="rounded-xl overflow-hidden border border-gray-100 mb-4">
+                                <Image
+                                src="/gradeEight.jpg"
+                                alt="Grade 8 Math and Reading NAEP trends relative to digital adoption"
+                                width={800}
+                                height={500}
+                                className="w-full object-contain"
+                                />
+                            </div>
+                            {/* Pre/Post slopes for Grade 8 */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                {[
+                                    { subject: 'Math — Pre-adoption',    value: '+0.67 pts/yr', color: 'emerald' },
+                                    { subject: 'Math — Post-adoption',   value: '−1.14 pts/yr', color: 'red'     },
+                                    { subject: 'Reading — Pre-adoption',  value: '+0.17 pts/yr', color: 'emerald' },
+                                    { subject: 'Reading — Post-adoption', value: '−0.99 pts/yr', color: 'red'     },
+                                ].map(({ subject, value, color }) => (
+                                    <div key={subject}
+                                        className={`rounded-xl px-3 py-2.5 text-center border
+                                            ${color === 'emerald'
+                                                ? 'bg-emerald-50 border-emerald-100'
+                                                : 'bg-red-50 border-red-100'}`}>
+                                        <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wide mb-1 leading-tight">
+                                            {subject}
+                                        </p>
+                                        <p className={`text-sm font-bold
+                                            ${color === 'emerald' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                            {value}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* Source Attribution */}
+                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <p className="text-[10px] sm:text-xs text-gray-500 italic leading-relaxed">
+                            Note: The national charts utilize a "Year 0" alignment strategy where Year 0 
+                            represents the specific year each state reached a threshold of digital device 
+                            saturation in classrooms. Data via NAEP (National Assessment of Educational Progress).
+                        </p>
+                    </div>
+                </div>
             </main>
+
+            {/* Footer */}
+            <footer className="mt-12 pb-12 border-t border-gray-200 pt-8 px-4">
+                <div className="max-w-screen-2xl mx-auto text-center">
+                    <p className="text-xs text-gray-400">
+                        &copy; {new Date().getFullYear()} Nebraska Assessment Dashboard
+                    </p>
+                </div>
+            </footer>
         </div>
     )
 }
