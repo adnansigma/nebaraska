@@ -2,7 +2,7 @@
 
 interface LineStyleLegendProps {
     viewMode: string
-    showDistrict66?: boolean   // 👈 added
+    showDistrict66?: boolean  
 }
 
 export function LineStyleLegend({ viewMode, showDistrict66 }: LineStyleLegendProps) {
@@ -51,8 +51,9 @@ export function LineStyleLegend({ viewMode, showDistrict66 }: LineStyleLegendPro
                                 <line x1="0" y1="6" x2="36" y2="6"
                                       stroke="#94A3B8" strokeWidth="2.5"
                                       strokeDasharray="3,3" />
-                                <polygon points="18,2.5 21.5,9.5 14.5,9.5"
-                                         fill="#94A3B8" />
+                                <rect x="15" y="3" width="6" height="6"
+                                    fill="#94A3B8"
+                                    style={{ transform: 'rotate(45deg)', transformOrigin: 'center' }} />
                             </svg>
                             <div>
                                 <p className="text-xs font-semibold text-gray-700">
@@ -98,8 +99,9 @@ export function LineStyleLegend({ viewMode, showDistrict66 }: LineStyleLegendPro
                             <line x1="0" y1="6" x2="36" y2="6"
                                   stroke="#dc2626" strokeWidth="3"
                                   strokeDasharray="6,3" />
-                            <polygon points="18,2 22,10 14,10"
-                                     fill="#dc2626" />
+                            <rect x="15" y="3" width="6" height="6"
+                                fill="#dc2626"
+                                style={{ transform: 'rotate(45deg)', transformOrigin: 'center' }} />
                         </svg>
                         <div>
                             <p className="text-xs font-semibold text-red-600">
