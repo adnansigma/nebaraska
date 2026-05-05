@@ -492,9 +492,7 @@ export default function Dashboard() {
                                 </p>
                                 <p className="text-xs sm:text-sm text-gray-500 mt-3 leading-relaxed">
                                     The charts below show national NAEP averages aligned to each state's digital
-                                    inflection point (Year 0). <span className="text-gray-700 font-medium">2022 data is excluded</span> to
-                                    remove COVID disruption effects. The green trend line shows pre-adoption growth;
-                                    the red shows post-adoption decline.
+                                    inflection point (Year 0). These results cannot be attributed to COVID because Year 0 for every state occurred before the pandemic and 2022 data was excluded entirely. Unlike most “standardized” educational assessments that periodically reset their scoring scales, NAEP has remained anchored to its original 1992 scale, meaning these declines reflect genuine losses in student learning, not adjustments to the test.
                                 </p>
                             </div>
                         </div>
