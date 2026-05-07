@@ -141,7 +141,7 @@ export default function Dashboard() {
                     <div>
                         <h1 className="text-white font-bold text-lg sm:text-xl lg:text-3xl
                                        tracking-wide leading-tight">
-                            Nebraska Department of Education
+                            Pencils before Pixels
                         </h1>
                         <p className="text-blue-200 text-[10px] sm:text-xs mt-0.5
                                       font-medium tracking-widest uppercase">
@@ -522,7 +522,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Charts Grid */}
-                    <div className="flex flex-col gap-4 sm:gap-5 mb-5">
+                    <div className="flex flex-row gap-4 sm:gap-5 mb-5">
 
                         {/* Image 1: Grade 4 Math + Grade 4 Reading */}
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
@@ -601,7 +601,6 @@ export default function Dashboard() {
                                 ))}
                             </div>
                         </div>
-
                     </div>
 
                     {/* Source Attribution */}
@@ -612,7 +611,525 @@ export default function Dashboard() {
                             saturation in classrooms. Data via NAEP (National Assessment of Educational Progress).
                         </p>
                     </div>
+
+                    {/* ── International Research Section ──────────────────────────────────── */}
+                    <div className="mt-8 sm:mt-10">
+
+                        {/* Section Header */}
+                        <div className="mb-4 sm:mb-5">
+                            <h2 className="text-lg sm:text-xl font-bold text-gray-800">
+                                International Research: Screen Time &amp; Academic Performance
+                            </h2>
+                            <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                                Findings from PISA, TIMSS, PIRLS and OECD across dozens of countries.
+                            </p>
+                        </div>
+
+                        {/* ── Chart 1: PISA All Countries ───────────────────────────────────── */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-5">
+                            <div className="mb-3">
+                                <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                                    PISA: All Countries — In-School Computer Use vs. Score
+                                </h3>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                                    PISA longitudinal data (2012–2018) reveals that students exceeding six 
+                                    hours of daily in-school computer use score an average of 66 points lower than non-users, a 
+                                    decline equivalent to two full letter grades.
+                                </p>
+                            </div>
+                            <div className="relative">
+                            {/* Legend — top right of the card */}
+                            <div className="absolute -top-11 right-0 flex flex-col gap-1 z-10">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-6 border-t-2 border-[#1a3353]"></div>
+                                    <span className="text-[10px] text-gray-600">2012</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-6 border-t-2 border-dashed border-[#4a6fa5]"></div>
+                                    <span className="text-[10px] text-gray-600">2015</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-6 border-t-2 border-dashed border-[#8aafd4]"></div>
+                                    <span className="text-[10px] text-gray-600">2018</span>
+                                </div>
+                            </div>
+
+                            {/* The 3 charts */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <Plot
+                                data={[
+                                    // Math 2012
+                                    {
+                                        type: 'scatter', mode: 'lines+markers', name: '2012',
+                                        x: [0, 30, 90, 180, 300, 390],
+                                        y: [508, 495, 465, 462, 450, 430],
+                                        line: { color: '#1a3353', width: 2 },
+                                        marker: { size: 6, color: '#1a3353' },
+                                        legendgroup: 'math2012',
+                                        hovertemplate: 'Math 2012<br>CPU: %{x} min/day<br>Score: %{y}<extra></extra>',
+                                    },
+                                    // Math 2015
+                                    {
+                                        type: 'scatter', mode: 'lines+markers', name: '2015',
+                                        x: [0, 30, 90, 180, 300, 390],
+                                        y: [483, 492, 461, 458, 450, 425],
+                                        line: { color: '#4a6fa5', width: 2, dash: 'dot' },
+                                        marker: { size: 6, color: '#4a6fa5' },
+                                        hovertemplate: 'Math 2015<br>CPU: %{x} min/day<br>Score: %{y}<extra></extra>',
+                                    },
+                                    // Math 2018
+                                    {
+                                        type: 'scatter', mode: 'lines+markers', name: '2018',
+                                        x: [0, 30, 90, 180, 300, 390],
+                                        y: [470, 492, 456, 454, 450, 420],
+                                        line: { color: '#8aafd4', width: 2, dash: 'dash' },
+                                        marker: { size: 6, color: '#8aafd4' },
+                                        hovertemplate: 'Math 2018<br>CPU: %{x} min/day<br>Score: %{y}<extra></extra>',
+                                    },
+                                ] as any}
+                                layout={{
+                                    title: { text: 'MATH', font: { size: 12, color: '#374151' } },
+                                    xaxis: {
+                                        title: { text: 'In-School CPU Use (min/day)', font: { size: 10 } },
+                                        tickvals: [0, 30, 90, 180, 300, 390],
+                                        ticktext: ['0', '1–60', '61–120', '121–240', '241–360', '>360'],
+                                        gridcolor: '#f3f4f6',
+                                    },
+                                    yaxis: { title: { text: 'Total Score', font: { size: 10 } }, range: [400, 520], gridcolor: '#f3f4f6' },
+                                    plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                    height: 280, margin: { t: 40, r: 20, b: 60, l: 55 },
+                                    font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
+                                    showlegend: false,
+                                }}
+                                style={{ width: '100%' }}
+                                config={{ responsive: true, displayModeBar: false }}
+                                useResizeHandler={true}
+                            />
+                                
+                                <Plot
+                                    data={[
+                                        {
+                                            type: 'scatter', mode: 'lines+markers', name: '2012',
+                                            x: [0, 30, 90, 180, 300, 390],
+                                            y: [508, 495, 465, 462, 450, 430],
+                                            line: { color: '#1a3353', width: 2 },
+                                            marker: { size: 6 },
+                                            hovertemplate: 'Reading 2012<br>Score: %{y}<extra></extra>',
+                                        },
+                                        {
+                                            type: 'scatter', mode: 'lines+markers', name: '2015',
+                                            x: [0, 30, 90, 180, 300, 390],
+                                            y: [483, 492, 461, 458, 448, 420],
+                                            line: { color: '#4a6fa5', width: 2, dash: 'dot' },
+                                            marker: { size: 6 },
+                                            hovertemplate: 'Reading 2015<br>Score: %{y}<extra></extra>',
+                                        },
+                                        {
+                                            type: 'scatter', mode: 'lines+markers', name: '2018',
+                                            x: [0, 30, 90, 180, 300, 390],
+                                            y: [470, 480, 456, 454, 445, 417],
+                                            line: { color: '#8aafd4', width: 2, dash: 'dash' },
+                                            marker: { size: 6 },
+                                            hovertemplate: 'Reading 2018<br>Score: %{y}<extra></extra>',
+                                        },
+                                    ] as any}
+                                    layout={{
+                                        title: { text: 'READING', font: { size: 12, color: '#374151' } },
+                                        xaxis: {
+                                            title: { text: 'In-School CPU Use (min/day)', font: { size: 10 } },
+                                            tickvals: [0, 30, 90, 180, 300, 390],
+                                            ticktext: ['0', '1–60', '61–120', '121–240', '241–360', '>360'],
+                                            gridcolor: '#f3f4f6',
+                                        },
+                                        yaxis: { title: { text: 'Total Score', font: { size: 10 } }, range: [400, 530], gridcolor: '#f3f4f6' },
+                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                        height: 260, margin: { t: 40, r: 10, b: 60, l: 55 },
+                                        font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
+                                        showlegend: false,
+                                    }}
+                                    style={{ width: '100%' }}
+                                    config={{ responsive: true, displayModeBar: false }}
+                                    useResizeHandler={true}
+                                />
+                                
+                                {/* Science */}
+                                <Plot
+                                    data={[
+                                        {
+                                            type: 'scatter', mode: 'lines+markers', name: '2012',
+                                            x: [0, 30, 90, 180, 300, 390],
+                                            y: [508, 495, 465, 462, 450, 430],
+                                            line: { color: '#1a3353', width: 2 },
+                                            marker: { size: 6 },
+                                            hovertemplate: 'Science 2012<br>Score: %{y}<extra></extra>',
+                                        },
+                                        {
+                                            type: 'scatter', mode: 'lines+markers', name: '2015',
+                                            x: [0, 30, 90, 180, 300, 390],
+                                            y: [483, 492, 463, 458, 447, 425],
+                                            line: { color: '#4a6fa5', width: 2, dash: 'dot' },
+                                            marker: { size: 6 },
+                                            hovertemplate: 'Science 2015<br>Score: %{y}<extra></extra>',
+                                        },
+                                        {
+                                            type: 'scatter', mode: 'lines+markers', name: '2018',
+                                            x: [0, 30, 90, 180, 300, 390],
+                                            y: [470, 482, 461, 454, 445, 420],
+                                            line: { color: '#8aafd4', width: 2, dash: 'dash' },
+                                            marker: { size: 6 },
+                                            hovertemplate: 'Science 2018<br>Score: %{y}<extra></extra>',
+                                        },
+                                    ] as any}
+                                    layout={{
+                                        title: { text: 'SCIENCE', font: { size: 12, color: '#374151' } },
+                                        xaxis: {
+                                            title: { text: 'In-School CPU Use (min/day)', font: { size: 10 } },
+                                            tickvals: [0, 30, 90, 180, 300, 390],
+                                            ticktext: ['0', '1–60', '61–120', '121–240', '241–360', '>360'],
+                                            gridcolor: '#f3f4f6',
+                                        },
+                                        yaxis: { title: { text: 'Total Score', font: { size: 10 } }, range: [400, 530], gridcolor: '#f3f4f6' },
+                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                        height: 260, margin: { t: 40, r: 60, b: 60, l: 55 },
+                                        showlegend: false,
+                                        font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
+                                    }}
+                                    style={{ width: '100%' }}
+                                    config={{ responsive: true, displayModeBar: false }}
+                                    useResizeHandler={true}
+                                />
+                            </div>
+                        </div>
+                
+
+                            {/* Callout stat */}
+                            <div className="mt-4 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-center">
+                                <p className="text-xs text-gray-600">
+                                    Students using screens <span className="font-bold text-gray-800">&gt;6 hours/day</span> scored
+                                    an average of <span className="font-bold text-red-600">66 points lower</span> than
+                                    non-users — equivalent to a <span className="font-semibold text-gray-800">two letter-grade drop</span> (50th → 24th percentile).
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* ── Chart 2: OECD Scatter ─────────────────────────────────────────── */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-5">
+                        <div className="mb-3">
+                            <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                                OECD Countries — EdTech Access vs. Math Performance Change
+                            </h3>
+                            <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                                Countries that invested more in classroom computers showed greater declines in PISA Math scores (2003 vs. 2012).
+                                Adjusted association: <span className="font-semibold text-gray-600">−0.57</span>.
+                            </p>
+                        </div>
+                        <Plot
+                            data={[
+                                {
+                                    type: 'scatter', mode: 'markers+text',
+                                    x : [
+                                        1.3, // Turkey
+                                        4.8, // Mexico
+                                        5.3, // Greece
+                                        6.8, // Italy
+                                        6.0, // Korea
+                                        6.3, // Luxembourg
+                                        6.2, // Germany
+                                        6.5, // Japan
+                                        6.4, // Switzerland
+                                        7.3, // Austria
+                                        6.8, // Netherlands
+                                        7.1, // Canada
+                                        6.9, // Belgium
+                                        7.7, // Ireland
+                                        8.3, // Spain
+                                        8.5, // Norway
+                                        7.8, // United States
+                                        7.5, // Denmark
+                                        7.2, // France
+                                        6.3, // Iceland
+                                        9.0, // Hungary
+                                        7.3, // Portugal
+                                        7.5, // Poland
+                                        6.9, // Finland
+                                        6.5, // Sweden
+                                        8.8, // Slovak Republic
+                                        8.8, // Czech Republic
+                                        9.7, // Australia
+                                        9.8  // New Zealand
+                                        ],
+
+                                        y : [
+                                        24,  // Turkey
+                                        28,  // Mexico
+                                        8,   // Greece
+                                        19,  // Italy
+                                        11,  // Korea
+                                        -8,  // Luxembourg
+                                        10,  // Germany
+                                        2,   // Japan
+                                        4,   // Switzerland
+                                        0,   // Austria
+                                        -15, // Netherlands
+                                        -16, // Canada
+                                        -15, // Belgium
+                                        -2,  // Ireland
+                                        -1,  // Spain
+                                        -6,  // Norway
+                                        -2,  // United States
+                                        -15, // Denmark
+                                        -16, // France
+                                        -22, // Iceland
+                                        -12, // Hungary
+                                        21,  // Portugal
+                                        28,  // Poland
+                                        -26, // Finland
+                                        -31, // Sweden
+                                        -18, // Slovak Republic
+                                        -19, // Czech Republic
+                                        -20, // Australia
+                                        -24  // New Zealand
+                                        ],
+
+                                        text: [
+                                        'Turkey', 'Mexico', 'Greece', 'Italy', 'Korea', 'Luxembourg',
+                                        'Germany', 'Japan', 'Switzerland', 'Austria', 'Netherlands',
+                                        'Canada', 'Belgium', 'Ireland', 'Spain', 'Norway',
+                                        'United States', 'Denmark', 'France', 'Iceland', 'Hungary',
+                                        'Portugal', 'Poland', 'Finland', 'Sweden', 'Slovak Republic',
+                                        'Czech Republic', 'Australia', 'New Zealand'
+                                        ],
+                                    textposition: [
+                                        'top right', 'top center', 'bottom center', 'top center', 'top left',
+                                        'bottom left', 'top center', 'bottom center', 'top right', 'top right',
+                                        'bottom center', 'bottom left', 'top left', 'bottom right', 'top right',
+                                        'bottom right', 'top right', 'bottom center', 'bottom left', 'bottom left',
+                                        'top right', 'top right', 'top center', 'bottom center', 'bottom center',
+                                        'bottom left', 'bottom right', 'bottom right', 'bottom right',
+                                    ],
+                                    textfont: { size: 8, color: '#6b7280' },
+                                    marker: { size: 8, color: '#1a3353', opacity: 0.8 },
+                                    hovertemplate: '<b>%{text}</b><br>Score change: %{y}<extra></extra>',
+                                    showlegend: false,
+                                },
+                                // Trend line
+                                {
+                                    type: 'scatter', mode: 'lines',
+                                    x: [0, 11.5],
+                                    y: [36, -30],  // adjusted to better fit the data
+                                    line: { color: '#ff9901', width: 2 },  // change '#111827' to whatever color you want
+                                    hoverinfo: 'skip',
+                                    showlegend: false,
+                                },
+                            ] as any}
+                            layout={{
+                                xaxis: {
+                                    title: { text: '← Fewer Computers                More Computers →', font: { size: 10 } },
+                                    showticklabels: false,
+                                    gridcolor: '#f3f4f6',
+                                    zeroline: false, zerolinecolor: '#e5e7eb',
+                                    range: [0, 10.5],
+                                },
+                                yaxis: {
+                                    title: { text: 'Difference in Math Performance (PISA 2012 vs 2003)', font: { size: 10 } },
+                                    gridcolor: '#f3f4f6',
+                                    zeroline: false, zerolinecolor: '#9ca3af', zerolinewidth: 1.5,
+                                    range: [-42, 35],
+                                },
+                                plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                height: 480,
+                                margin: { t: 20, r: 20, b: 60, l: 70 },
+                                font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
+                                showlegend: false,
+                                annotations: [{
+                                    text: 'OECD COUNTRIES',
+                                    xref: 'paper', yref: 'paper',
+                                    x: 0.5, y: 1.04, xanchor: 'center',
+                                    showarrow: false,
+                                    font: { size: 12, color: '#374151', family: 'Inter, sans-serif' },
+                                }],
+                            }}
+                            style={{ width: '100%' }}
+                            config={{ responsive: true, displayModeBar: false }}
+                            useResizeHandler={true}
+                        />
+                    </div>
+
+                        {/* ── Chart 3: TIMSS ────────────────────────────────────────────────── */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-5">
+                            <div className="mb-3">
+                                <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                                    TIMSS: All Countries — In-School Computer Use vs. Math Score
+                                </h3>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                                    Students using computers in class scored ~41 points lower in math 
+                                    than those who rarely used them — a drop from the 50th to the 32nd percentile.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Plot
+                                    data={[{
+                                        type: 'bar',
+                                        x: ['Almost Never', '1–2x per Month', '1–2x per Week', 'Almost Daily'],
+                                        y: [550, 535, 508, 499],
+                                        marker: {
+                                            color: ['#1a3353', '#2d5282', '#4a6fa5', '#7fa3cc'],
+                                        },
+                                        hovertemplate: '%{x}<br>Score: %{y}<extra></extra>',
+                                        showlegend: false,
+                                    }] as any}
+                                    layout={{
+                                        title: { text: '4th Grade Math', font: { size: 12, color: '#374151' } },
+                                        xaxis: { title: { text: 'In-School CPU Use', font: { size: 10 } }, gridcolor: '#f3f4f6' },
+                                        yaxis: { title: { text: 'Total Score', font: { size: 10 } }, range: [480, 560], gridcolor: '#f3f4f6' },
+                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                        height: 280, margin: { t: 40, r: 10, b: 80, l: 60 },
+                                        font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
+                                    }}
+                                    style={{ width: '100%' }}
+                                    config={{ responsive: true, displayModeBar: false }}
+                                    useResizeHandler={true}
+                                />
+                                <Plot
+                                    data={[{
+                                        type: 'bar',
+                                        x: ['Almost Never', '1–2x per Month', '1–2x per Week', 'Almost Daily'],
+                                        y: [528, 518, 497, 484],
+                                        marker: {
+                                            color: ['#1a3353', '#2d5282', '#4a6fa5', '#7fa3cc'],
+                                        },
+                                        hovertemplate: '%{x}<br>Score: %{y}<extra></extra>',
+                                        showlegend: false,
+                                    }] as any}
+                                    layout={{
+                                        title: { text: '8th Grade Math', font: { size: 12, color: '#374151' } },
+                                        xaxis: { title: { text: 'In-School CPU Use', font: { size: 10 } }, gridcolor: '#f3f4f6' },
+                                        yaxis: { title: { text: 'Total Score', font: { size: 10 } }, range: [460, 545], gridcolor: '#f3f4f6' },
+                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                        height: 280, margin: { t: 40, r: 10, b: 80, l: 60 },
+                                        font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
+                                    }}
+                                    style={{ width: '100%' }}
+                                    config={{ responsive: true, displayModeBar: false }}
+                                    useResizeHandler={true}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── Chart 4: PIRLS ────────────────────────────────────────────────── */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-5">
+                            <div className="mb-3">
+                                <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                                    PIRLS: In-School Computer Use vs. Reading Score
+                                </h3>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                                    PIRLS (Progress in International Reading Literacy Study) assesses 4th grade reading
+                                    across dozens of countries every 5 years. Pattern mirrors PISA and TIMSS findings.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Plot
+                                    data={[{
+                                        type: 'bar', orientation: 'h',
+                                        y: ['Almost Never', '1–2x per Month', '1–2x per Week', 'Almost Daily'],
+                                        x: [508, 508, 508, 455],
+                                        marker: { color: ['#1a3353', '#2d5282', '#4a6fa5', '#7fa3cc'] },
+                                        hovertemplate: '%{y}<br>Score: %{x}<extra></extra>',
+                                        showlegend: false,
+                                    }] as any}
+                                    layout={{
+                                        title: { text: 'All Countries', font: { size: 12, color: '#374151' } },
+                                        xaxis: { title: { text: 'Total Score', font: { size: 10 } }, range: [450, 550], gridcolor: '#f3f4f6' },
+                                        yaxis: { title: { text: 'In-School CPU Use', font: { size: 10 } }, gridcolor: '#f3f4f6' },
+                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                        height: 240, margin: { t: 40, r: 20, b: 50, l: 120 },
+                                        font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
+                                    }}
+                                    style={{ width: '100%' }}
+                                    config={{ responsive: true, displayModeBar: false }}
+                                    useResizeHandler={true}
+                                />
+                                <Plot
+                                    data={[{
+                                        type: 'bar', orientation: 'h',
+                                        y: ['Almost Never', '1–2x per Month', '1–2x per Week', 'Almost Daily'],
+                                        x: [532, 537, 520, 484],
+                                        marker: { color: ['#1a3353', '#2d5282', '#4a6fa5', '#7fa3cc'] },
+                                        hovertemplate: '%{y}<br>Score: %{x}<extra></extra>',
+                                        showlegend: false,
+                                    }] as any}
+                                    layout={{
+                                        title: { text: 'OECD Countries Only', font: { size: 12, color: '#374151' } },
+                                        xaxis: { title: { text: 'Total Score', font: { size: 10 } }, range: [480, 560], gridcolor: '#f3f4f6' },
+                                        yaxis: { title: { text: 'In-School CPU Use', font: { size: 10 } }, gridcolor: '#f3f4f6' },
+                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                        height: 240, margin: { t: 40, r: 20, b: 50, l: 120 },
+                                        font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
+                                    }}
+                                    style={{ width: '100%' }}
+                                    config={{ responsive: true, displayModeBar: false }}
+                                    useResizeHandler={true}
+                                />
+                            </div>
+                        </div>
+
+                        {/* ── Chart 5: Time on Devices vs Math (OECD) ───────────────────────── */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-5">
+                            <div className="mb-3">
+                                <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                                    Time on Digital Devices at School &amp; Mathematics Performance
+                                </h3>
+                                <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
+                                    Based on students' self-reports · OECD average.
+                                    Learning use declines steadily; leisure use drops sharply after 3 hours.
+                                </p>
+                            </div>
+                            <Plot
+                                data={[
+                                    {
+                                        type: 'scatter', mode: 'lines+markers', name: 'Learning',
+                                        x: ['None', 'Up to 1 hr', '1–2 hrs', '2–3 hrs', '3–5 hrs', '5–7 hrs', '>7 hrs'],
+                                        y: [455, 481, 478, 479, 477, 465, 459],
+                                        line: { color: '#1a3353', width: 2.5 },
+                                        marker: { size: 7, symbol: 'diamond', color: '#1a3353' },
+                                        hovertemplate: 'Learning<br>%{x}<br>Score: %{y}<extra></extra>',
+                                    },
+                                    {
+                                        type: 'scatter', mode: 'lines+markers', name: 'Leisure',
+                                        x: ['None', 'Up to 1 hr', '1–2 hrs', '2–3 hrs', '3–5 hrs', '5–7 hrs', '>7 hrs'],
+                                        y: [471, 491, 483, 469, 450, 430, 435],
+                                        line: { color: '#ef4444', width: 2.5 },
+                                        marker: { size: 7, symbol: 'circle', color: '#ef4444' },
+                                        hovertemplate: 'Leisure<br>%{x}<br>Score: %{y}<extra></extra>',
+                                    },
+                                ] as any}
+                                layout={{
+                                    xaxis: {
+                                        title: { text: 'Time Spent on Digital Devices at School', font: { size: 11 } },
+                                        gridcolor: '#f3f4f6', linecolor: '#e5e7eb',
+                                    },
+                                    yaxis: {
+                                        title: { text: 'Mean Score in Mathematics', font: { size: 11 } },
+                                        gridcolor: '#f3f4f6', linecolor: '#e5e7eb',
+                                        range: [360, 510],
+                                    },
+                                    hovermode: 'closest',
+                                    showlegend: true,
+                                    legend: { orientation: 'h', y: -0.22, x: 0.5, xanchor: 'center', font: { size: 10 } },
+                                    plot_bgcolor: 'white', paper_bgcolor: 'white',
+                                    height: 340,
+                                    margin: { t: 10, r: 20, b: 80, l: 65 },
+                                    font: { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
+                                }}
+                                style={{ width: '100%' }}
+                                config={{ responsive: true, displayModeBar: false }}
+                                useResizeHandler={true}
+                            />
+                        </div>
+
+                    </div>
                 </div>
+
             </main>
 
             {/* Footer */}

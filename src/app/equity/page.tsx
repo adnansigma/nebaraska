@@ -396,7 +396,7 @@ export default function EquityPage() {
                     <div>
                         <h1 className="text-white font-bold text-lg sm:text-xl lg:text-3xl
                                        tracking-wide leading-tight">
-                            Nebraska Department of Education
+                            Pencils before Pixels
                         </h1>
                         <p className="text-blue-200 text-[10px] sm:text-xs mt-0.5
                                       font-medium tracking-widest uppercase">
