@@ -10,6 +10,7 @@ import { fetchDashboardData }            from '@/services/scoreService'
 import { MultiSelect }                   from '@/components/MultiSelect'
 import { ChartSkeleton }                 from '@/components/ChartSkeleton'
 import { getYear, weightedAvg }          from '@/lib/chartUtils'
+import { Navbar } from '@/components/Navbar'
 
 const Plot = dynamic(
     () => import('react-plotly.js').then(mod => mod.default),
@@ -391,33 +392,13 @@ export default function EquityPage() {
 
             {/* Header */}
             <header className="bg-[#1a3353] shadow-lg">
-                <div className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12
-                                py-3 sm:py-4 flex items-center gap-3 sm:gap-4">
-                    <div>
-                        <h1 className="text-white font-bold text-lg sm:text-xl lg:text-3xl
-                                       tracking-wide leading-tight">
-                            Pencils before Pixels
-                        </h1>
-                        <p className="text-blue-200 text-[10px] sm:text-xs mt-0.5
-                                      font-medium tracking-widest uppercase">
-                            Assessment Data Dashboard
-                        </p>
-                    </div>
-                </div>
+                <Navbar />
             </header>
 
             <main className="mx-auto max-w-screen-2xl px-4 sm:px-8 lg:px-12 py-5 sm:py-8">
 
                 {/* Back + Title */}
                 <div className="flex flex-col gap-4 mb-6">
-                    <Link
-                        href="/"
-                        className="inline-flex p-2 rounded-full bg-white shadow-sm
-                                   border border-gray-200 hover:bg-gray-50
-                                   transition-colors group w-fit"
-                    >
-                        <ChevronLeft className="w-4 h-4 text-gray-600 group-hover:text-gray-900" />
-                    </Link>
                     <div>
                         <h1 className="text-2xl font-bold text-slate-900">
                             Equity Analysis
@@ -770,7 +751,7 @@ export default function EquityPage() {
             <footer className="mt-12 pb-12 border-t border-gray-200 pt-8 px-4">
                 <div className="max-w-screen-2xl mx-auto text-center">
                     <p className="text-xs text-gray-400">
-                        &copy; {new Date().getFullYear()} Nebraska Assessment Dashboard
+                        &copy; {new Date().getFullYear()} Pencils before Pixels — Assessment Data Dashboard
                     </p>
                 </div>
             </footer>
