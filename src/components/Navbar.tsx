@@ -5,10 +5,9 @@ import { BarChart2, School, Scale, LineChart } from 'lucide-react'
 import { useState } from 'react'
 
 const NAV_ITEMS = [
-    { href: '/',           label: 'Home',            icon: BarChart2 },
+    { href: '/',           label: 'Nebraska',            icon: BarChart2 },
     { href: '/district66', label: 'District 66',     icon: School    },
-    { href: '/charts',     label: 'Research Charts', icon: LineChart  },
-    { href: '/equity',     label: 'Equity Analysis', icon: Scale     },
+    { href: '/charts',     label: 'Research', icon: LineChart  },
 ]
 
 export function Navbar() {
@@ -21,13 +20,9 @@ export function Navbar() {
 
                     {/* Branding — left */}
                     <div className="flex-shrink-0">
-                        <h1 className="text-white font-bold text-lg sm:text-xl tracking-wide leading-tight">
+                        <h1 className="text-white font-bold text-2xl sm:text-4xl md:text-4xl tracking-wide leading-tight">
                             Pencils before Pixels
                         </h1>
-                        <p className="text-blue-200 text-[9px] sm:text-[10px] font-medium
-                                      tracking-widest uppercase mt-0.5 hidden sm:block">
-                            Assessment Data Dashboard
-                        </p>
                     </div>
 
                     {/* Nav links — right (desktop) */}
