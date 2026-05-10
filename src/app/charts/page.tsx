@@ -721,7 +721,7 @@ export default function ChartsPage() {
                                 name: 'Online 2015, Paper 2016',
                                 x: [2011, 2012, 2013, 2014, 2015, 2016],
                                 y: [0.018, 0.015, 0.022, -0.002, -0.07, 0.03],
-                                line: { color: '#3b82f6', width: 2, dash: 'dot' },
+                                line: { color: '#3b82f6', width: 2},
                                 marker: { size: 6, color: '#3b82f6' },
                             },
                             {
@@ -730,8 +730,8 @@ export default function ChartsPage() {
                                 name: 'Online, 2015 & 2016',
                                 x: [2011, 2012, 2013, 2014, 2015, 2016],
                                 y: [0.07, 0.071, 0.055, 0.055, 0.003, 0.03],
-                                line: { color: '#000000', width: 2, dash: 'dashdot' },
-                                marker: { size: 7, symbol: 'square', color: '#000000' },
+                                line: { color: '#000000', width: 2 },
+                                marker: { size: 7, color: '#000000' },
                             },
                             {
                                 type: 'scatter',
@@ -739,8 +739,8 @@ export default function ChartsPage() {
                                 name: 'Paper 2015, Online 2016',
                                 x: [2011, 2012, 2013, 2014, 2015, 2016],
                                 y: [-0.175, -0.19, -0.175, -0.12, -0.065, -0.22],
-                                line: { color: '#ef4444', width: 2, dash: 'solid' },
-                                marker: { size: 7, symbol: 'square', color: '#ef4444' },
+                                line: { color: '#ef4444', width: 2},
+                                marker: { size: 7, color: '#ef4444' },
                             },
                         ] as any}
                         layout={{
@@ -769,7 +769,7 @@ export default function ChartsPage() {
                                 name: 'Paper, 2015 & 2016',
                                 x: [2011, 2012, 2013, 2014, 2015, 2016],
                                 y: [-0.065, -0.053, -0.054, -0.043, 0.10, 0.03],
-                                line: { color: '#10b981', width: 2, dash: 'solid' },
+                                line: { color: '#10b981', width: 2 },
                                 marker: { size: 7, color: '#10b981' },
                             },
                             {
@@ -778,7 +778,7 @@ export default function ChartsPage() {
                                 name: 'Online 2015, Paper 2016',
                                 x: [2011, 2012, 2013, 2014, 2015, 2016],
                                 y: [0.0, -0.015, -0.002, -0.018, -0.195, 0.055],
-                                line: { color: '#3b82f6', width: 2, dash: 'dot' },
+                                line: { color: '#3b82f6', width: 2},
                                 marker: { size: 6, color: '#3b82f6' },
                             },
                             {
@@ -787,8 +787,8 @@ export default function ChartsPage() {
                                 name: 'Online, 2015 & 2016',
                                 x: [2011, 2012, 2013, 2014, 2015, 2016],
                                 y: [0.085, 0.082, 0.079, 0.07, -0.02, 0.01],
-                                line: { color: '#000000', width: 2, dash: 'dashdot' },
-                                marker: { size: 7, symbol: 'square', color: '#000000' },
+                                line: { color: '#000000', width: 2 },
+                                marker: { size: 7, color: '#000000' },
                             },
                             {
                                 type: 'scatter',
@@ -796,8 +796,8 @@ export default function ChartsPage() {
                                 name: 'Paper 2015, Online 2016',
                                 x: [2011, 2012, 2013, 2014, 2015, 2016],
                                 y: [-0.145, -0.18, -0.188, -0.16, -0.02, -0.335],
-                                line: { color: '#ef4444', width: 2, dash: 'solid' },
-                                marker: { size: 7, symbol: 'square', color: '#ef4444' },
+                                line: { color: '#ef4444', width: 2 },
+                                marker: { size: 7, color: '#ef4444' },
                             },
                         ] as any}
                         layout={{
