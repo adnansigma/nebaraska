@@ -2,6 +2,7 @@
 import dynamic from 'next/dynamic'
 import { Navbar } from '@/components/Navbar'
 import { ChartSkeleton } from '@/components/ChartSkeleton'
+import { ScreenTimeChart } from '@/components/ScreenTimeChart'
 import Image from 'next/image'
 
 const Plot = dynamic(
@@ -818,6 +819,30 @@ export default function ChartsPage() {
                     />
                 </div>
             </div>
+            {/*
+                Chart 7: Early Screen Time & Academic Achievement
+                ──────────────────────────────────────────────────
+            */}
+
+            {/* ── Chart 7: JAMA Screen Time & Academic Achievement ─────────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-5">
+
+                {/* Card header */}
+                <div className="mb-4">
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                        Early Screen Time &amp; Children's Academic Achievement
+                    </h3>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-1 leading-relaxed">
+                        A 15-year prospective study of 5,400+ Canadian children linked daily screen habits in early childhood
+                        to official reading, writing, and math test results in Grades 3 and 6.
+                    </p>
+                </div>
+
+                {/* The interactive chart component */}
+                <ScreenTimeChart />
+            </div>
+
+
             </main>
             <footer className="mt-12 pb-12 border-t border-gray-200 pt-8 px-4">
                 <div className="max-w-screen-2xl mx-auto text-center">
