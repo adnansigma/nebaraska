@@ -267,9 +267,10 @@ export default function District66Page() {
         )
         const bySchool: Record<string, { scores: number[]; counts: number[] }> = {}
         rows.forEach(r => {
-            const score = parseFloat(r.avg_scale_score)
-            const count = parseFloat(r.count_tested) || 1
+            const score    = parseFloat(r.avg_scale_score)
+            const rawCount = parseFloat(r.count_tested)
             if (!isFinite(score) || score <= 0) return
+            const count = (isFinite(rawCount) && rawCount > 0) ? rawCount : 1
             const name = normalizeSchoolName(r.agency_name)
             if (!bySchool[name]) bySchool[name] = { scores: [], counts: [] }
             bySchool[name].scores.push(score)

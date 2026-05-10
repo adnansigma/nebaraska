@@ -155,9 +155,10 @@ export default function Dashboard() {
         )
         const byDist: Record<string, { scores: number[]; counts: number[]; grades: Set<string>; totalTested: number }> = {}
         rows.forEach(r => {
-            const score = parseFloat(r.avg_scale_score)
-            const count = parseFloat(r.count_tested)
-            if (!isFinite(count) || count <= 0 || !isFinite(score) || score <= 0) return
+            const score    = parseFloat(r.avg_scale_score)
+            const rawCount = parseFloat(r.count_tested)
+            if (!isFinite(score) || score <= 0) return
+            const count = (isFinite(rawCount) && rawCount > 0) ? rawCount : 1
             const normName = normalizeName(r.agency_name)
             if (!byDist[normName]) byDist[normName] = { scores: [], counts: [], grades: new Set(), totalTested: 0 }
             byDist[normName].scores.push(score)

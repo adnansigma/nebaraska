@@ -61,8 +61,7 @@ export function buildYearMapWithGrades(
 
         // ✅ Skip rows with missing/invalid SCORE only
         // count=0 is allowed — use 1 as fallback so score still contributes
-        if (!isFinite(score) || score <= 0) return
-
+        if (!isFinite(score) || score <= 0) return          // only score must be valid
         const count = (isFinite(rawCount) && rawCount > 0) ? rawCount : 1
 
         const yr = getYear(r.school_year)
