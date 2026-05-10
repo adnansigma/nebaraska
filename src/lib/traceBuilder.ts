@@ -19,6 +19,25 @@ export function buildTraces({
 }: BuildTracesParams): object[] {
     if (!filteredData.length) return []
 
+    // ── DEBUG: log all raw rows for SUNSET ───────────────────────────
+    const sunsetRows = filteredData.filter(r => r.agency_name.includes('SUNSET'))
+    if (sunsetRows.length) {
+        console.group('🔍 SUNSET raw filteredData rows')
+        sunsetRows.forEach(r => console.log({
+            school_year    : r.school_year,
+            agency_name    : r.agency_name,
+            level          : r.level,
+            grade          : r.grade,
+            subgroup_type  : r.subgroup_type,
+            avg_scale_score: r.avg_scale_score,
+            count_tested   : r.count_tested,
+        }))
+        console.groupEnd()
+    } else {
+        console.warn('⚠️ No SUNSET rows found in filteredData at all')
+    }
+    // ── END DEBUG ────────────────────────────────────────────────────
+
     const result: object[] = []
 
     // ── All Students view ─────────────────────────────────────────────
@@ -36,11 +55,9 @@ export function buildTraces({
             const isST         = level === 'ST'
             const isDistrict66 = name === DISTRICT_66_NAME
 
-            // ✅ Use grade-aware year map
             const m        = buildYearMapWithGrades(rows)
             const allYears = Object.keys(m).map(Number).sort()
 
-            // ✅ Only keep years where weighted average is a valid number
             const validPairs = allYears
                 .map(yr => ({
                     yr,
@@ -49,10 +66,17 @@ export function buildTraces({
                 }))
                 .filter(({ avg }) => isFinite(avg))
 
+            // ── DEBUG: final plotted pairs ───────────────────────────
+            if (name.includes('SUNSET')) {
+                console.group(`📈 SUNSET final validPairs`)
+                validPairs.forEach(p => console.log(`  yr=${p.yr} avg=${p.avg.toFixed(2)} grades=${p.grades}`))
+                console.groupEnd()
+            }
+            // ── END DEBUG ────────────────────────────────────────────
+
             result.push({
                 x: validPairs.map(p => p.yr),
                 y: validPairs.map(p => p.avg),
-                // ✅ customdata[0] = comma-separated grade list for tooltip
                 customdata: validPairs.map(p => [p.grades.join(', ')]),
                 mode: 'lines+markers',
                 name: isST ? 'State Average' : name,
@@ -69,7 +93,6 @@ export function buildTraces({
                     symbol: isST ? 'diamond' : 'circle',
                 },
                 opacity: isST ? 1 : 0.85,
-                // ✅ Show grades in tooltip; state has no grade breakdown
                 hovertemplate: isST
                     ? `<b>State Average</b><br>Year: %{x}<br>Score: %{y:.1f}<extra></extra>`
                     : `<b>${name}</b><br>Year: %{x}<br>Score: %{y:.1f}<br>Grades: %{customdata[0]}<extra></extra>`,
@@ -96,7 +119,6 @@ export function buildTraces({
         const femaleRows = filteredData.filter(r =>
             r.agency_name === name && r.level === level && r.subgroup_desc === 'Female')
 
-        // ✅ Use grade-aware maps for gender view too
         const maleMap   = buildYearMapWithGrades(maleRows)
         const femaleMap = buildYearMapWithGrades(femaleRows)
 
@@ -116,7 +138,7 @@ export function buildTraces({
                     avg:    weightedAvg(maleMap[yr].scores, maleMap[yr].counts),
                     grades: [...maleMap[yr].grades].sort(),
                 }))
-                .filter(({ avg }) => isFinite(avg))  // ✅ drop NaN years
+                .filter(({ avg }) => isFinite(avg))
 
             result.push({
                 x: malePairs.map(p => p.yr),
@@ -144,7 +166,7 @@ export function buildTraces({
                     avg:    weightedAvg(femaleMap[yr].scores, femaleMap[yr].counts),
                     grades: [...femaleMap[yr].grades].sort(),
                 }))
-                .filter(({ avg }) => isFinite(avg))  // ✅ drop NaN years
+                .filter(({ avg }) => isFinite(avg))
 
             result.push({
                 x: femalePairs.map(p => p.yr),
@@ -168,7 +190,6 @@ export function buildTraces({
             const combinedPairs = allYears
                 .filter(yr => maleMap[yr] && femaleMap[yr])
                 .map(yr => {
-                    // Merge grade lists from both male and female maps for this year
                     const mergedGrades = [
                         ...new Set([...maleMap[yr].grades, ...femaleMap[yr].grades])
                     ].sort()
@@ -181,7 +202,7 @@ export function buildTraces({
                         grades: mergedGrades,
                     }
                 })
-                .filter(({ avg }) => isFinite(avg))  // ✅ drop NaN years
+                .filter(({ avg }) => isFinite(avg))
 
             result.push({
                 x: combinedPairs.map(p => p.yr),

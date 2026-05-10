@@ -5,7 +5,11 @@
  * e.g. "2017-18" → 2018, "2022-23" → 2023
  */
 export function getYear(schoolYear: string): number {
-    return parseInt(schoolYear.split('-')[1])
+    // "2017-18" → 2018,  "2022-23" → 2023,  "2024-2025" → 2025
+    const parts = schoolYear.split('-')
+    const suffix = parts[1]
+    if (suffix.length === 4) return parseInt(suffix)          // already full year
+    return parseInt(parts[0].slice(0, 2) + suffix)            // "20" + "18" = 2018
 }
 
 /**
@@ -29,10 +33,11 @@ export function buildYearMap(
     const m: Record<number, { scores: number[]; counts: number[] }> = {}
     rows.forEach(r => {
         const score = parseFloat(r.avg_scale_score)
-        const count = parseFloat(r.count_tested)
+        const rawCount = parseFloat(r.count_tested)
 
-        // ✅ Skip rows where score or count is missing/invalid
-        if (!isFinite(score) || score <= 0 || !isFinite(count) || count <= 0) return
+        if (!isFinite(score) || score <= 0) return  // score must be valid
+
+        const count = (isFinite(rawCount) && rawCount > 0) ? rawCount : 1
 
         const yr = getYear(r.school_year)
         if (!m[yr]) m[yr] = { scores: [], counts: [] }
@@ -52,17 +57,19 @@ export function buildYearMapWithGrades(
     const m: Record<number, { scores: number[]; counts: number[]; grades: string[] }> = {}
     rows.forEach(r => {
         const score = parseFloat(r.avg_scale_score)
-        const count = parseFloat(r.count_tested)
+        const rawCount = parseFloat(r.count_tested)
 
-        // ✅ Skip rows where score or count is missing/invalid
-        if (!isFinite(score) || score <= 0 || !isFinite(count) || count <= 0) return
+        // ✅ Skip rows with missing/invalid SCORE only
+        // count=0 is allowed — use 1 as fallback so score still contributes
+        if (!isFinite(score) || score <= 0) return
+
+        const count = (isFinite(rawCount) && rawCount > 0) ? rawCount : 1
 
         const yr = getYear(r.school_year)
         if (!m[yr]) m[yr] = { scores: [], counts: [], grades: [] }
         m[yr].scores.push(score)
         m[yr].counts.push(count)
 
-        // Track grade label e.g. "03" → "3"
         const gradeLabel = `Grade ${parseInt(r.grade)}`
         if (!m[yr].grades.includes(gradeLabel)) {
             m[yr].grades.push(gradeLabel)
