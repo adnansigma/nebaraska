@@ -21,7 +21,7 @@ export function Navbar() {
                     {/* Branding — left */}
                     <div className="flex-shrink-0">
                         <h1 className="text-white font-bold text-2xl sm:text-4xl md:text-4xl tracking-wide leading-tight">
-                            Pencils before Pixels
+                            Pencils Before Pixels
                         </h1>
                     </div>
 
