@@ -847,7 +847,7 @@ export default function ChartsPage() {
             <footer className="mt-12 pb-12 border-t border-gray-200 pt-8 px-4">
                 <div className="max-w-screen-2xl mx-auto text-center">
                     <p className="text-xs text-gray-400">
-                        &copy; {new Date().getFullYear()} Pencils before Pixels — Assessment Data Dashboard
+                        &copy; {new Date().getFullYear()} Pencils Before Pixels 
                     </p>
                 </div>
             </footer>
