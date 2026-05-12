@@ -229,8 +229,8 @@ export default function ChartsPage() {
                             </div>
 
                             {/* The 3 charts */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <Plot
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            <Plot
                                 data={[
                                     // Math 2012
                                     {
@@ -320,53 +320,6 @@ export default function ChartsPage() {
                                         height: 260, margin: { t: 40, r: 10, b: 60, l: 55 },
                                         font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
                                         showlegend: false,
-                                    }}
-                                    style={{ width: '100%' }}
-                                    config={{ responsive: true, displayModeBar: false }}
-                                    useResizeHandler={true}
-                                />
-                                
-                                {/* Science */}
-                                <Plot
-                                    data={[
-                                        {
-                                            type: 'scatter', mode: 'lines+markers', name: '2012',
-                                            x: [0, 30, 90, 180, 300, 390],
-                                            y: [508, 495, 465, 462, 450, 430],
-                                            line: { color: '#1a3353', width: 2 },
-                                            marker: { size: 6 },
-                                            hovertemplate: 'Science 2012<br>Score: %{y}<extra></extra>',
-                                        },
-                                        {
-                                            type: 'scatter', mode: 'lines+markers', name: '2015',
-                                            x: [0, 30, 90, 180, 300, 390],
-                                            y: [483, 492, 463, 458, 447, 425],
-                                            line: { color: '#4a6fa5', width: 2, dash: 'dot' },
-                                            marker: { size: 6 },
-                                            hovertemplate: 'Science 2015<br>Score: %{y}<extra></extra>',
-                                        },
-                                        {
-                                            type: 'scatter', mode: 'lines+markers', name: '2018',
-                                            x: [0, 30, 90, 180, 300, 390],
-                                            y: [470, 482, 461, 454, 445, 420],
-                                            line: { color: '#8aafd4', width: 2, dash: 'dash' },
-                                            marker: { size: 6 },
-                                            hovertemplate: 'Science 2018<br>Score: %{y}<extra></extra>',
-                                        },
-                                    ] as any}
-                                    layout={{
-                                        title: { text: 'SCIENCE', font: { size: 12, color: '#374151' } },
-                                        xaxis: {
-                                            title: { text: 'In-School CPU Use (min/day)', font: { size: 10 } },
-                                            tickvals: [0, 30, 90, 180, 300, 390],
-                                            ticktext: ['0', '1–60', '61–120', '121–240', '241–360', '>360'],
-                                            gridcolor: '#f3f4f6',
-                                        },
-                                        yaxis: { title: { text: 'Total Score', font: { size: 10 } }, range: [400, 530], gridcolor: '#f3f4f6' },
-                                        plot_bgcolor: 'white', paper_bgcolor: 'white',
-                                        height: 260, margin: { t: 40, r: 60, b: 60, l: 55 },
-                                        showlegend: false,
-                                        font: { family: 'Inter, sans-serif', size: 9, color: '#6b7280' },
                                     }}
                                     style={{ width: '100%' }}
                                     config={{ responsive: true, displayModeBar: false }}
