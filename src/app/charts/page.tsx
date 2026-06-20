@@ -794,6 +794,117 @@ export default function ChartsPage() {
                 {/* The interactive chart component */}
                 <ScreenTimeChart />
             </div>
+            {/* ── Chart 8: Adolescent Mental Health Trends ──────────────────────── */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 mb-5">
+
+                {/* Card header */}
+                <div className="mb-4">
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-800">
+                        Adolescent Mental Health Indicators, 2001–2018
+                    </h3>
+                    <p className="text-[10px] sm:text-xs text-gray-400 mt-1 leading-relaxed">
+                        Standardized (Z-score) annual rates of four mental health indicators among
+                        U.S. adolescents from 2001 to 2018: suicide, self-poisoning, major depressive
+                        episode, and depressive symptoms.
+                    </p>
+                </div>
+
+                <div className="relative">
+                    <Plot
+                        data={[
+                            {
+                                type: 'scatter', mode: 'lines+markers',
+                                name: 'Suicide',
+                                x: [2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017],
+                                y: [-0.72,-0.85,-1.00,-0.13,-0.75,-0.78,-1.15,-0.75,-0.20,-0.27,-0.22,-0.35,0.97,1.15,1.25,1.75,1.65],
+                                line: { color: '#ef4444', width: 1.5 },
+                                marker: { size: 4 },
+                                hovertemplate: 'Suicide<br>%{x}: %{y:.2f}<extra></extra>',
+                            },
+                            {
+                                type: 'scatter', mode: 'lines+markers',
+                                name: 'Self-poisoning',
+                                x: [2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018],
+                                y: [-0.53,-0.50,-0.47,-0.40,-0.55,-0.78,-0.85,-0.78,-0.80,-0.88,-0.72,-0.30,0.25,1.05,1.40,1.42,1.75,1.70],
+                                line: { color: '#10b981', width: 1.5 },
+                                marker: { size: 4 },
+                                hovertemplate: 'Self-poisoning<br>%{x}: %{y:.2f}<extra></extra>',
+                            },
+                            {
+                                type: 'scatter', mode: 'lines+markers',
+                                name: 'Major Depressive Episode',
+                                x: [2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017],
+                                y: [-0.50,-0.92,-0.85,-0.62,-1.02,-0.40,-1.07,-0.35,0.72,0.65,1.62,1.12,1.62],
+                                line: { color: '#1a3353', width: 1.5 },
+                                marker: { size: 4 },
+                                hovertemplate: 'Major Depressive Episode<br>%{x}: %{y:.2f}<extra></extra>',
+                            },
+                            {
+                                type: 'scatter', mode: 'lines+markers',
+                                name: 'Depressive Symptoms',
+                                x: [2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018],
+                                y: [-0.97,-0.82,-0.35,-0.25,-0.50,-0.65,-1.25,-0.75,-0.35,-0.53,-0.60,-0.45, 0.25,1.25,1.35,0.93,1.85,1.95],
+                                line: { color: '#3b82f6', width: 1.5 },
+                                marker: { size: 4, symbol: 'circle' },
+                                hovertemplate: 'Depressive Symptoms<br>%{x}: %{y:.2f}<extra></extra>',
+                            },
+                        ] as any}
+                        layout={{
+                            xaxis: {
+                                title: { text: 'Year', font: { size: 11 } },
+                                tickvals: [2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018],
+                                tickangle: 90,
+                                gridcolor: '#f3f4f6', linecolor: '#e5e7eb',
+                            },
+                            yaxis: {
+                                title: { text: 'Z-score', font: { size: 11 } },
+                                gridcolor: '#f3f4f6', linecolor: '#e5e7eb',
+                                zeroline: true, zerolinecolor: '#9ca3af', zerolinewidth: 1.5,
+                                range: [-2, 2.1],
+                                dtick: 0.5,
+                                tickformat: '.1f',
+                            },
+                            shapes: [{
+                                type: 'rect',
+                                x0: 2012, x1: 2018,
+                                y0: -2, y1: 2.1,
+                                fillcolor: '#eff6ff',
+                                opacity: 0.5,
+                                line: { width: 0 },
+                                layer: 'below',
+                            }],
+                            annotations: [{
+                                x: 2012, y: 2.0,
+                                xref: 'x', yref: 'y',
+                                text: 'Sustained rise begins →',
+                                showarrow: false,
+                                xanchor: 'left',
+                                font: { size: 9, color: '#3b82f6' },
+                            }],
+                            hovermode: 'closest',
+                            showlegend: true,
+                            legend: { orientation: 'h', y: -0.25, x: 0.5, xanchor: 'center', font: { size: 10 } },
+                            plot_bgcolor: 'white', paper_bgcolor: 'white',
+                            height: 420,
+                            margin: { t: 40, r: 20, b: 90, l: 60 },
+                            font: { family: 'Inter, sans-serif', size: 10, color: '#6b7280' },
+                        }}
+                        style={{ width: '100%' }}
+                        config={{ responsive: true, displayModeBar: false }}
+                        useResizeHandler={true}
+                    />
+                </div>
+
+                {/* Callout stat */}
+                <div className="mt-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-center">
+                    <p className="text-xs text-gray-600">
+                        All four indicators move from <span className="font-bold text-gray-800">below the
+                        historical average</span> pre-2012 to <span className="font-bold text-blue-900">well
+                        above it</span> by 2017–2018 — a synchronized shift across independent data sources
+                        rarely seen outside of major societal change.
+                    </p>
+                </div>
+            </div>
 
 
             </main>
