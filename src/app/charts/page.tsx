@@ -803,9 +803,7 @@ export default function ChartsPage() {
                         Adolescent Mental Health Indicators, 2001–2018
                     </h3>
                     <p className="text-[10px] sm:text-xs text-gray-400 mt-1 leading-relaxed">
-                        Standardized (Z-score) annual rates of four mental health indicators among
-                        U.S. adolescents from 2001 to 2018: suicide, self-poisoning, major depressive
-                        episode, and depressive symptoms.
+                        This chart tracks four independent measures of adolescent mental health, suicide, self-poisoning, major depressive episodes, and depressive symptoms, from 2001 to 2018. All four indicators held below the historical average for over a decade, then turned sharply upward around 2012, the same period smartphones became ubiquitous among teenagers and social media platforms like Facebook and Instagram moved from desktop curiosities to pocket-sized constants that followed kids everywhere, including into their bedrooms at night. The synchronized rise across four completely separate data sources is, as the chart notes, the kind of pattern rarely seen outside of major societal change, and the timing points directly at the phone-based, social media-saturated childhood that took hold in the early 2010s and has yet to reverse.
                     </p>
                 </div>
 
