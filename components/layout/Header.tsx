@@ -115,9 +115,34 @@ export function Header() {
   }, [isFixedHeaderPage]);
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? "hidden" : "";
+    if (!menuOpen) return;
+
+    const scrollY = window.scrollY;
+    const { style } = document.body;
+    const previous = {
+      position: style.position,
+      top: style.top,
+      left: style.left,
+      right: style.right,
+      width: style.width,
+      overflow: style.overflow,
+    };
+
+    style.position = "fixed";
+    style.top = `-${scrollY}px`;
+    style.left = "0";
+    style.right = "0";
+    style.width = "100%";
+    style.overflow = "hidden";
+
     return () => {
-      document.body.style.overflow = "";
+      style.position = previous.position;
+      style.top = previous.top;
+      style.left = previous.left;
+      style.right = previous.right;
+      style.width = previous.width;
+      style.overflow = previous.overflow;
+      window.scrollTo(0, scrollY);
     };
   }, [menuOpen]);
 
@@ -132,6 +157,21 @@ export function Header() {
       setActiveHash(getActiveSectionHash());
     }
   }, [isFixedHeaderPage, pathname]);
+
+  useEffect(() => {
+    if (lenis || isFixedHeaderPage) return;
+
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > SCROLL_THRESHOLD);
+      if (pathname === "/") {
+        setActiveHash(getActiveSectionHash());
+      }
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [lenis, isFixedHeaderPage, pathname]);
 
   const showScrolled = isFixedHeaderPage || isScrolled;
   const menuVariant = showScrolled || menuOpen ? "dark" : "light";
@@ -149,7 +189,7 @@ export function Header() {
           className={sectionPaddingX}
         >
           <div
-            className={`${contentMaxWidthClass} flex h-[90px] items-center justify-between py-4 max-lg:h-[72px] max-lg:py-3`}
+            className={`${contentMaxWidthClass} flex h-[var(--header-height)] items-center justify-between py-4 max-lg:py-3`}
           >
             <Logo variant={showScrolled || menuOpen ? "dark" : "light"} />
 

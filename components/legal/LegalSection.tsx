@@ -10,7 +10,7 @@ export function LegalSection({ id, title, children }: LegalSectionProps) {
   return (
     <section
       id={id}
-      className="scroll-mt-28 border-t border-paper-300 pt-10 first:border-t-0 first:pt-0 lg:scroll-mt-32"
+      className="scroll-mt-[calc(var(--header-height)+1rem)] border-t border-paper-300 pt-10 first:border-t-0 first:pt-0 lg:scroll-mt-[calc(var(--header-height)+1.5rem)]"
     >
       <h2 className="font-display text-fluid-display-sm leading-display tracking-[-0.02em] text-navy-800">
         {title}

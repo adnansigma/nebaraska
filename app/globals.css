@@ -12,7 +12,7 @@
   --text-body-lg: clamp(1rem, 0.35vw + 0.9rem, 1.125rem);
   --text-quote: clamp(1.5rem, 2vw + 0.75rem, 2.25rem);
   --text-timeline-number: clamp(3rem, 8vw + 1rem, 6rem);
-  --header-height: clamp(4rem, 2vw + 3.5rem, 5.625rem);
+  --header-height: 72px;
   --color-paper-50: #faf8f4;
   --color-paper-200: #f0eae0;
   --color-paper-300: #e8e0d0;
@@ -63,17 +63,34 @@ html {
   height: 100%;
   background-color: var(--color-paper-50);
   overflow-x: clip;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
   scrollbar-gutter: stable;
 }
 
 body {
   min-height: 100%;
+  min-height: 100dvh;
   background: var(--color-paper-50);
   color: var(--color-navy-800);
   font-family: var(--font-dm-sans), system-ui, sans-serif;
   overflow-x: clip;
-  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+}
+
+@supports (-webkit-touch-callout: none) {
+  html {
+    height: -webkit-fill-available;
+  }
+
+  body {
+    min-height: -webkit-fill-available;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --header-height: 90px;
+  }
 }
 
 .scroll-reveal-hidden {

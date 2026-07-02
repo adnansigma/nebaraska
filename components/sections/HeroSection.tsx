@@ -64,7 +64,7 @@ export function HeroSection() {
 
   return (
     <section ref={sectionRef} className="relative w-full overflow-x-clip">
-      <div className="relative flex h-screen w-full max-w-full flex-col overflow-hidden">
+      <div className="relative flex h-dvh min-h-dvh w-full max-w-full flex-col overflow-hidden">
         <div ref={imageRef} className="absolute inset-0 overflow-hidden will-change-transform">
           <Image
             src={backgroundImage}

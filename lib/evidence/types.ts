@@ -51,7 +51,13 @@ export type EvidencePanelResponse =
 
 export type ResearchPanelData = ResearchChartsData;
 
+export type EvidenceVersion = {
+  version: string;
+  updatedAt: string;
+};
+
 export type EvidenceBootstrap = {
+  version: string;
   allDistricts: DistrictOption[];
   grades: string[];
   schoolYears: string[];

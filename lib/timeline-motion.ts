@@ -1,4 +1,6 @@
 const SCROLL_VIEWPORTS_PER_SLIDE = 1.28;
+/** Ignore minor mobile browser chrome height jitter without freezing layout forever. */
+const VIEWPORT_HEIGHT_STICKY_THRESHOLD = 80;
 
 type SlideMotion = {
   opacity: number;
@@ -18,6 +20,29 @@ type TimelineMetrics = {
 export function getViewportHeight() {
   if (typeof window === "undefined") return 0;
   return window.visualViewport?.height ?? window.innerHeight;
+}
+
+export function resolveViewportHeight(
+  previousHeight: number | null,
+  options?: { stabilize?: boolean },
+): number {
+  const measured = getViewportHeight();
+  const fallback =
+    previousHeight ??
+    (typeof window !== "undefined" ? window.innerHeight : 0) ??
+    800;
+  const next = measured > 0 ? measured : fallback;
+
+  if (
+    options?.stabilize &&
+    previousHeight &&
+    previousHeight > 0 &&
+    Math.abs(next - previousHeight) < VIEWPORT_HEIGHT_STICKY_THRESHOLD
+  ) {
+    return previousHeight;
+  }
+
+  return next;
 }
 
 export function getTimelineMetrics(

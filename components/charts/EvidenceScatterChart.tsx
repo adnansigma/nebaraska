@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  getChartLayout,
+  scaleToPlotY,
+} from "@/components/charts/chart-layout";
 import type { EquityDistrictPoint, EquityScatterPanelData } from "@/lib/evidence/types";
 
 type EvidenceScatterChartProps = {
   panel: EquityScatterPanelData;
 };
-
-const PADDING = { top: 20, right: 24, bottom: 52, left: 56 };
-
 
 function buildTicks(min: number, max: number, count = 4) {
   const step = (max - min) / (count - 1);
@@ -37,8 +38,7 @@ export function EvidenceScatterChart({ panel }: EvidenceScatterChartProps) {
 
   const width = size.width;
   const height = size.height;
-  const plotWidth = Math.max(width - PADDING.left - PADDING.right, 0);
-  const plotHeight = Math.max(height - PADDING.top - PADDING.bottom, 0);
+  const layout = getChartLayout(width, height);
 
   const highlightSet = new Set(
     panel.highlightedDistricts.map((district) => district.id),
@@ -62,11 +62,9 @@ export function EvidenceScatterChart({ panel }: EvidenceScatterChartProps) {
   const yTicks = buildTicks(yMin, yMax);
 
   const toX = (frlPct: number) =>
-    PADDING.left + ((frlPct - xMin) / (xMax - xMin || 1)) * plotWidth;
-  const toY = (score: number) =>
-    PADDING.top +
-    plotHeight -
-    ((score - yMin) / (yMax - yMin || 1)) * plotHeight;
+    layout.plotLeft +
+    ((frlPct - xMin) / (xMax - xMin || 1)) * layout.plotWidth;
+  const toY = (score: number) => scaleToPlotY(score, yMin, yMax, layout);
 
   const trendPath =
     panel.trendLine.length === 2
@@ -89,15 +87,15 @@ export function EvidenceScatterChart({ panel }: EvidenceScatterChartProps) {
               return (
                 <g key={tick}>
                   <line
-                    x1={PADDING.left}
-                    x2={width - PADDING.right}
+                    x1={layout.plotLeft}
+                    x2={layout.plotRight}
                     y1={y}
                     y2={y}
                     stroke="rgba(15,31,61,0.08)"
                     strokeWidth={1}
                   />
                   <text
-                    x={PADDING.left - 8}
+                    x={layout.plotLeft - 8}
                     y={y + 3}
                     textAnchor="end"
                     className="fill-navy-800 font-sans text-[10px]"
@@ -108,13 +106,22 @@ export function EvidenceScatterChart({ panel }: EvidenceScatterChartProps) {
               );
             })}
 
+            <line
+              x1={layout.plotLeft}
+              x2={layout.plotRight}
+              y1={layout.plotBottom}
+              y2={layout.plotBottom}
+              stroke="rgba(15,31,61,0.14)"
+              strokeWidth={1}
+            />
+
             {xTicks.map((tick) => {
               const x = toX(tick);
               return (
                 <text
                   key={tick}
                   x={x}
-                  y={height - 24}
+                  y={layout.tickY}
                   textAnchor="middle"
                   className="fill-navy-800 font-sans text-[10px]"
                 >
@@ -125,8 +132,8 @@ export function EvidenceScatterChart({ panel }: EvidenceScatterChartProps) {
 
             <text
               x={12}
-              y={height / 2}
-              transform={`rotate(-90 12 ${height / 2})`}
+              y={layout.yAxisLabelY}
+              transform={`rotate(-90 12 ${layout.yAxisLabelY})`}
               textAnchor="middle"
               className="fill-navy-800 text-[9px]"
             >
@@ -135,7 +142,7 @@ export function EvidenceScatterChart({ panel }: EvidenceScatterChartProps) {
 
             <text
               x={width / 2}
-              y={height - 4}
+              y={layout.xLabelY}
               textAnchor="middle"
               className="fill-navy-800 text-[9px]"
             >

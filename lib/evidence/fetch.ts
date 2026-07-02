@@ -223,7 +223,7 @@ export async function getGenderLinePanelData(options: {
   };
 }
 
-export async function getEvidenceBootstrap() {
+export async function getEvidenceBootstrapUncached() {
   const [allDistricts, schoolYears] = await Promise.all([
     getAllDistrictOptions("math"),
     getSchoolYears("math"),

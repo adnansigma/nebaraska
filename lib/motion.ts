@@ -19,12 +19,20 @@ export const LENIS_OPTIONS: LenisOptions = {
   duration: 1.15,
   smoothWheel: true,
   wheelMultiplier: 0.92,
-  touchMultiplier: 1.12,
+  touchMultiplier: 1,
   autoRaf: true,
   allowNestedScroll: true,
+  overscroll: false,
+  syncTouch: false,
 };
 
 export function prefersReducedMotion() {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Touch devices use native scroll — Lenis causes iOS rubber-band jitter at page end. */
+export function prefersNativeScroll() {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(pointer: coarse)").matches;
 }

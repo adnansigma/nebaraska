@@ -2,15 +2,15 @@ import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
 import { EvidenceExplorer } from "@/components/evidence/EvidenceExplorer";
 import { PageFrame, sectionPaddingX } from "@/components/ui/Container";
-import { getEvidenceBootstrap } from "@/lib/evidence/fetch";
+import { getEvidenceBootstrap } from "@/lib/evidence/cached";
 
 export default async function EvidencePage() {
   const bootstrap = await getEvidenceBootstrap();
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-clip bg-paper-50">
+    <div className="flex min-h-dvh flex-col overflow-x-clip bg-paper-50">
       <Header />
-      <main className="flex-1 overflow-x-clip bg-paper-50 pt-[90px]">
+      <main className="flex-1 overflow-x-clip bg-paper-50 pt-(--header-height)">
         <PageFrame paddingX={sectionPaddingX} className="py-8 sm:py-10 lg:py-12">
           <EvidenceExplorer bootstrap={bootstrap} />
         </PageFrame>

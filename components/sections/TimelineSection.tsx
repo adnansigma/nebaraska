@@ -13,14 +13,14 @@ import {
 import { useSiteContent } from "@/lib/cms/hooks";
 import type { TimelineSlide } from "@/lib/cms/types";
 import { sectionPaddingX } from "@/components/ui/Container";
-import { prefersReducedMotion } from "@/lib/motion";
+import { prefersReducedMotion, prefersNativeScroll } from "@/lib/motion";
 import {
   getDotProximity,
   getSlideMotion,
   getTimelineMetrics,
   getTimelinePinState,
   getTimelineProgress,
-  getViewportHeight,
+  resolveViewportHeight,
 } from "@/lib/timeline-motion";
 import { scrollToSection } from "@/lib/navigation";
 
@@ -112,6 +112,8 @@ export function TimelineSection() {
   const reducedMotionRef = useRef(false);
   const lenisScrollRef = useRef(0);
   const lenisRef = useRef<Lenis | null>(null);
+  const viewportHeightRef = useRef(0);
+  const lastMeasureWidthRef = useRef<number | null>(null);
 
   const [wrapperHeight, setWrapperHeight] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -126,7 +128,17 @@ export function TimelineSection() {
 
     sectionTopRef.current = getAbsoluteTop(wrapper);
 
-    const viewportHeight = getViewportHeight();
+    const width = window.innerWidth;
+    const widthChanged =
+      lastMeasureWidthRef.current !== null &&
+      lastMeasureWidthRef.current !== width;
+    const viewportHeight = resolveViewportHeight(viewportHeightRef.current, {
+      stabilize: prefersNativeScroll() && !widthChanged,
+    });
+
+    viewportHeightRef.current = viewportHeight;
+    lastMeasureWidthRef.current = width;
+
     const { totalHeight, scrollDistance } = getTimelineMetrics(
       slideCount,
       viewportHeight,
@@ -143,7 +155,18 @@ export function TimelineSection() {
   const applyPinStyles = useCallback((scrollY: number) => {
     const pin = pinRef.current;
     const { scrollDistance, viewportHeight } = metricsRef.current;
-    if (!pin || scrollDistance <= 0 || viewportHeight <= 0) return;
+    if (!pin || scrollDistance <= 0 || viewportHeight <= 0) {
+      if (pin) {
+        pin.style.position = "relative";
+        pin.style.top = "0";
+        pin.style.left = "";
+        pin.style.right = "";
+        pin.style.width = "";
+        pin.style.height = "";
+        pin.style.zIndex = "";
+      }
+      return;
+    }
 
     const pinState = getTimelinePinState(
       scrollY,
@@ -153,7 +176,8 @@ export function TimelineSection() {
 
     pin.style.position = pinState.position;
     pin.style.top = `${pinState.top}px`;
-    pin.style.left = "0";
+    pin.style.left = pinState.position === "fixed" ? "0" : "0";
+    pin.style.right = pinState.position === "fixed" ? "0" : "";
     pin.style.width = "100%";
     pin.style.height = `${viewportHeight}px`;
     pin.style.zIndex = pinState.position === "fixed" ? "20" : "";
@@ -164,7 +188,7 @@ export function TimelineSection() {
     const { scrollDistance } = metricsRef.current;
     if (scrollDistance <= 0 || !trackRef.current) return;
 
-    if (wrapper && scrollY <= sectionTopRef.current + 4) {
+    if (wrapper) {
       sectionTopRef.current = getAbsoluteTop(wrapper);
     }
 
@@ -254,7 +278,7 @@ export function TimelineSection() {
   }, [measure, syncProgress]);
 
   useEffect(() => {
-    const onResize = () => {
+    const remeasure = () => {
       measure();
       scheduleSync(lenisScrollRef.current || window.scrollY);
     };
@@ -263,19 +287,50 @@ export function TimelineSection() {
       scheduleSync(lenisScrollRef.current || window.scrollY);
     };
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        remeasure();
+      }
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize);
-    window.visualViewport?.addEventListener("resize", onResize);
-    window.visualViewport?.addEventListener("scroll", onResize);
+    window.addEventListener("resize", remeasure);
+    window.addEventListener("load", remeasure);
+    window.visualViewport?.addEventListener("resize", remeasure);
+    window.visualViewport?.addEventListener("scroll", remeasure);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("app:scroll-lock-change", remeasure);
+
+    const wrapper = wrapperRef.current;
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && wrapper) {
+      resizeObserver = new ResizeObserver(remeasure);
+      resizeObserver.observe(wrapper);
+    }
 
     return () => {
       window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
-      window.visualViewport?.removeEventListener("resize", onResize);
-      window.visualViewport?.removeEventListener("scroll", onResize);
+      window.removeEventListener("resize", remeasure);
+      window.removeEventListener("load", remeasure);
+      window.visualViewport?.removeEventListener("resize", remeasure);
+      window.visualViewport?.removeEventListener("scroll", remeasure);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("app:scroll-lock-change", remeasure);
+      resizeObserver?.disconnect();
 
       if (rafRef.current !== null) {
         window.cancelAnimationFrame(rafRef.current);
+      }
+
+      const pin = pinRef.current;
+      if (pin) {
+        pin.style.position = "";
+        pin.style.top = "";
+        pin.style.left = "";
+        pin.style.right = "";
+        pin.style.width = "";
+        pin.style.height = "";
+        pin.style.zIndex = "";
       }
     };
   }, [measure, scheduleSync]);
@@ -320,7 +375,7 @@ export function TimelineSection() {
   return (
     <section
       ref={wrapperRef}
-      className="relative isolate w-full max-w-full"
+      className="relative isolate w-full max-w-full overflow-x-clip"
       style={wrapperHeight > 0 ? { height: wrapperHeight } : undefined}
       aria-label="Classroom technology timeline"
     >

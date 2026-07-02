@@ -15,6 +15,11 @@ import {
   pdfFilename,
 } from "@/lib/opt-out/build-pdf";
 import { docxFilename } from "@/lib/opt-out/build-docx";
+import {
+  lockBodyScroll,
+  modalInputClass,
+  unlockBodyScroll,
+} from "@/lib/modal/body-scroll-lock";
 import { createDefaultForm } from "@/lib/opt-out/types";
 import type { OptOutLetterForm } from "@/lib/opt-out/types";
 import { cn } from "@/lib/utils";
@@ -25,9 +30,6 @@ type OptOutLetterModalProps = {
 };
 
 type Phase = "form" | "generating" | "complete";
-
-const inputClass =
-  "h-10 w-full rounded-md border border-navy-800/20 bg-white px-3 text-sm text-navy-800 outline-none placeholder:text-navy-800/40 focus:border-navy-800/50";
 
 function Field({
   id,
@@ -89,8 +91,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
 
     const enterFrame = window.requestAnimationFrame(() => setVisible(true));
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    lockBodyScroll();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -100,7 +101,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
 
     return () => {
       window.cancelAnimationFrame(enterFrame);
-      document.body.style.overflow = previousOverflow;
+      unlockBodyScroll();
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [onClose, open]);
@@ -169,7 +170,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-100 flex items-end justify-center p-4 sm:items-center"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -263,7 +264,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
                     required
                     value={form.date}
                     onChange={(e) => updateField("date", e.target.value)}
-                    className={inputClass}
+                    className={cn(modalInputClass, "h-11")}
                   />
                 </Field>
 
@@ -274,7 +275,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
                     required
                     value={form.studentName}
                     onChange={(e) => updateField("studentName", e.target.value)}
-                    className={inputClass}
+                    className={cn(modalInputClass, "h-11")}
                   />
                 </Field>
               </div>
@@ -287,7 +288,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
                   value={form.recipientName}
                   onChange={(e) => updateField("recipientName", e.target.value)}
                   placeholder="Principal or administrator"
-                  className={inputClass}
+                  className={cn(modalInputClass, "h-11")}
                 />
               </Field>
 
@@ -298,7 +299,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
                   value={form.childName}
                   onChange={(e) => updateField("childName", e.target.value)}
                   placeholder="Same as student name if blank"
-                  className={inputClass}
+                  className={cn(modalInputClass, "h-11")}
                 />
               </Field>
 
@@ -309,7 +310,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
                     type="text"
                     value={form.school}
                     onChange={(e) => updateField("school", e.target.value)}
-                    className={inputClass}
+                    className={cn(modalInputClass, "h-11")}
                   />
                 </Field>
 
@@ -319,7 +320,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
                     type="text"
                     value={form.district}
                     onChange={(e) => updateField("district", e.target.value)}
-                    className={inputClass}
+                    className={cn(modalInputClass, "h-11")}
                   />
                 </Field>
               </div>
@@ -331,7 +332,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
                   required
                   value={form.stateTestName}
                   onChange={(e) => updateField("stateTestName", e.target.value)}
-                  className={inputClass}
+                  className={cn(modalInputClass, "h-11")}
                 />
               </Field>
 
@@ -342,7 +343,7 @@ export function OptOutLetterModal({ open, onClose }: OptOutLetterModalProps) {
                   required
                   value={form.parentName}
                   onChange={(e) => updateField("parentName", e.target.value)}
-                  className={inputClass}
+                  className={cn(modalInputClass, "h-11")}
                 />
               </Field>
 

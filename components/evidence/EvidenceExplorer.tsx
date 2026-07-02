@@ -46,6 +46,13 @@ import type {
 import { colorForDistrictIndex } from "@/lib/evidence/builders";
 import { formatSchoolYear } from "@/lib/evidence/chart-utils";
 import { DISTRICT_66_AVG_LABEL } from "@/lib/evidence/district66-constants";
+import {
+  fetchCachedDistricts,
+  fetchCachedEvidencePanel,
+  fetchCachedSchoolYears,
+  fetchCachedSchools,
+  getClientEvidenceBootstrap,
+} from "@/lib/evidence/fetch-client";
 import { cn } from "@/lib/utils";
 
 const TABS: {
@@ -143,46 +150,64 @@ export function EvidenceExplorer({ bootstrap }: { bootstrap: EvidenceBootstrap }
   const [schoolYears, setSchoolYears] = useState(bootstrap.schoolYears);
   const [allDistricts, setAllDistricts] = useState(bootstrap.allDistricts);
   const [panel, setPanel] = useState<EvidencePanelResponse>(bootstrap.performance);
+  const [evidenceVersion, setEvidenceVersion] = useState(bootstrap.version);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    let cancelled = false;
+
+    getClientEvidenceBootstrap(bootstrap)
+      .then((next) => {
+        if (cancelled) return;
+        setEvidenceVersion(next.version);
+        setAllDistricts(next.allDistricts);
+        setSchoolYears(next.schoolYears);
+        setPanel(next.performance);
+        setSchoolYear((current) =>
+          !next.schoolYears.includes(current) ? next.defaultSchoolYear : current,
+        );
+      })
+      .catch(() => {
+        // Keep server-rendered bootstrap on cache errors.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bootstrap]);
+
+  useEffect(() => {
+    if (!evidenceVersion) return;
+
     if (tab === "district-66") {
       void Promise.all([
-        fetch(`/api/evidence/schools?subject=${subject}`).then((response) =>
-          response.json(),
-        ),
-        fetch(`/api/evidence/school-years?subject=${subject}&tab=district-66`).then(
-          (response) => response.json(),
-        ),
+        fetchCachedSchools(evidenceVersion, subject),
+        fetchCachedSchoolYears(evidenceVersion, subject, "district-66"),
       ]).then(([schools, years]) => {
-        if (Array.isArray(schools)) setSchoolOptions(schools as DistrictOption[]);
-        if (Array.isArray(years) && years.length > 0) {
-          setSchoolYears(years as string[]);
-          if (!years.includes(schoolYear)) {
-            setSchoolYear(years[years.length - 1] as string);
-          }
+        setSchoolOptions(schools);
+        if (years.length > 0) {
+          setSchoolYears(years);
+          setSchoolYear((current) =>
+            years.includes(current) ? current : (years[years.length - 1] as string),
+          );
         }
       });
       return;
     }
 
     void Promise.all([
-      fetch(`/api/evidence/districts?subject=${subject}`).then((response) =>
-        response.json(),
-      ),
-      fetch(`/api/evidence/school-years?subject=${subject}`).then((response) =>
-        response.json(),
-      ),
+      fetchCachedDistricts(evidenceVersion, subject),
+      fetchCachedSchoolYears(evidenceVersion, subject, "nebraska"),
     ]).then(([districts, years]) => {
-      if (Array.isArray(districts)) setAllDistricts(districts as DistrictOption[]);
-      if (Array.isArray(years) && years.length > 0) {
-        setSchoolYears(years as string[]);
-        if (!years.includes(schoolYear)) {
-          setSchoolYear(years[years.length - 1] as string);
-        }
+      setAllDistricts(districts);
+      if (years.length > 0) {
+        setSchoolYears(years);
+        setSchoolYear((current) =>
+          years.includes(current) ? current : (years[years.length - 1] as string),
+        );
       }
     });
-  }, [subject, tab]);
+  }, [evidenceVersion, subject, tab]);
 
   const fetchPanel = useCallback(
     async (
@@ -219,19 +244,19 @@ export function EvidenceExplorer({ bootstrap }: { bootstrap: EvidenceBootstrap }
               : nextDistrictIds.join(","),
       });
 
-      const response = await fetch(`/api/evidence?${params.toString()}`);
-      if (!response.ok) return;
-      const data = (await response.json()) as EvidencePanelResponse;
+      const response = await fetchCachedEvidencePanel(evidenceVersion, params);
+      if (!response) return;
+      const data = response;
       setPanel(data);
       if (data.panelType === "equity" && nextTab === "nebraska") {
         setEquityDistricts(data.availableDistricts);
       }
     },
-    [],
+    [evidenceVersion],
   );
 
   useEffect(() => {
-    if (tab === "research") return;
+    if (tab === "research" || !evidenceVersion) return;
 
     startTransition(() => {
       void fetchPanel(
@@ -261,6 +286,7 @@ export function EvidenceExplorer({ bootstrap }: { bootstrap: EvidenceBootstrap }
     studentGroup,
     schoolYear,
     fetchPanel,
+    evidenceVersion,
   ]);
 
   const handleTabChange = (nextTab: EvidenceTab) => {
@@ -321,7 +347,7 @@ export function EvidenceExplorer({ bootstrap }: { bootstrap: EvidenceBootstrap }
     isDistrict66 && view === "performance";
 
   return (
-    <div className="flex w-full flex-col gap-8 lg:gap-12">
+    <div className="flex w-full min-w-0 flex-col gap-8 lg:gap-12">
       <div className="flex items-center gap-5">
         <Link
           href="/"
@@ -376,13 +402,13 @@ export function EvidenceExplorer({ bootstrap }: { bootstrap: EvidenceBootstrap }
 
         {tab !== "research" && (
           <>
-            <div className="flex w-full flex-col gap-4 sm:w-fit">
+            <div className="flex w-full min-w-0 max-w-full flex-col gap-4 sm:w-fit">
               <div className="flex w-full rounded-full border border-gold-500 p-1 sm:w-fit">
                 <button
                   type="button"
                   onClick={() => setView("performance")}
                   className={cn(
-                    "flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-center text-xs leading-control transition-colors sm:h-10 sm:w-[220px] sm:flex-none sm:px-6 sm:py-0 sm:text-[13px] sm:leading-single sm:whitespace-nowrap lg:w-[240px]",
+                    "flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-center text-xs leading-control transition-colors sm:h-10 sm:w-[220px] sm:flex-none sm:px-6 sm:py-0 sm:text-[13px] sm:leading-single sm:whitespace-nowrap xl:w-[240px]",
                     view === "performance"
                       ? "bg-gold-500 font-semibold text-slate-50"
                       : "font-normal text-[#6b7280] hover:text-navy-800",
@@ -395,7 +421,7 @@ export function EvidenceExplorer({ bootstrap }: { bootstrap: EvidenceBootstrap }
                   type="button"
                   onClick={() => setView("equity")}
                   className={cn(
-                    "flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-center text-xs leading-control transition-colors sm:h-10 sm:w-[220px] sm:flex-none sm:px-6 sm:py-0 sm:text-[13px] sm:leading-single sm:whitespace-nowrap lg:w-[240px]",
+                    "flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full px-3 py-2 text-center text-xs leading-control transition-colors sm:h-10 sm:w-[220px] sm:flex-none sm:px-6 sm:py-0 sm:text-[13px] sm:leading-single sm:whitespace-nowrap xl:w-[240px]",
                     view === "equity"
                       ? "bg-gold-500 font-semibold text-slate-50"
                       : "font-normal text-[#6b7280] hover:text-navy-800",
@@ -412,7 +438,7 @@ export function EvidenceExplorer({ bootstrap }: { bootstrap: EvidenceBootstrap }
               ) : null}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 md:flex md:flex-wrap md:items-end md:gap-6 lg:w-full lg:flex-nowrap">
+            <div className="grid min-w-0 grid-cols-2 gap-4 sm:gap-6 md:flex md:flex-wrap md:items-end md:gap-x-5 md:gap-y-4 lg:gap-x-6 lg:gap-y-5">
               <FilterField label="Subject">
                 <Select
                   value={subject}
@@ -901,8 +927,8 @@ function FilterCompactGroup({
   return (
     <div
       className={cn(
-        "col-span-2 flex items-end gap-3 md:w-auto md:flex-none",
-        growOnDesktop && "lg:min-w-0 lg:flex-[1.25]",
+        "col-span-2 flex min-w-0 flex-wrap items-end gap-3 sm:flex-nowrap md:w-auto md:flex-none",
+        growOnDesktop && "xl:min-w-0 xl:flex-[1_1_18rem] xl:max-w-88",
       )}
     >
       {children}
@@ -915,7 +941,7 @@ function ClearFilterButton({ onClick }: { onClick: () => void }) {
     <FilterField
       label="Actions"
       compact
-      className="lg:w-auto lg:flex-none [&_label]:invisible [&_label]:pointer-events-none [&_label]:select-none"
+      className="md:w-auto md:flex-none [&_label]:invisible [&_label]:pointer-events-none [&_label]:select-none xl:w-auto xl:flex-none"
     >
       <button
         type="button"
@@ -948,10 +974,10 @@ function FilterField({
         "flex flex-col gap-2",
         compact
           ? cn(
-              "w-auto flex-none justify-self-start",
-              growOnDesktop && "lg:min-w-0 lg:flex-1",
+              "w-auto min-w-0 flex-none justify-self-start",
+              growOnDesktop && "xl:min-w-0 xl:flex-1",
             )
-          : "w-full md:min-w-50 md:flex-1 md:max-w-[16rem] lg:max-w-none",
+          : "w-full min-w-0 md:flex-[1_1_10.5rem] md:max-w-[calc(50%-0.625rem)] lg:flex-[1_1_11rem] lg:max-w-[calc(33.333%-1rem)] xl:max-w-[16rem]",
         className,
       )}
     >

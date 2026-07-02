@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Anton, DM_Sans } from "next/font/google";
 import { AppProviders } from "@/components/providers/AppProviders";
 import { LOCAL_FAVICONS } from "@/lib/brand/favicon";
@@ -24,6 +24,11 @@ export async function generateMetadata(): Promise<Metadata> {
     description: content.settings.description,
   };
 }
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
 
 export default async function RootLayout({
   children,

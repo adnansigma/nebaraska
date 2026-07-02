@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { prefersReducedMotion } from "@/lib/motion";
 import {
+  lockBodyScroll,
+  modalInputClass,
+  shouldAutofocusModalField,
+  unlockBodyScroll,
+} from "@/lib/modal/body-scroll-lock";
+import {
   hasNewsletterSubscription,
   newsletterCopy,
   subscribeToNewsletter,
@@ -19,9 +25,6 @@ type NewsletterModalProps = {
 };
 
 type Phase = "idle" | "submitting" | "success";
-
-const inputClass =
-  "h-11 w-full rounded-md border border-navy-800/20 bg-white px-3 text-sm text-navy-800 outline-none placeholder:text-navy-800/40 focus:border-navy-800/50";
 
 export function NewsletterModal({
   open,
@@ -65,11 +68,12 @@ export function NewsletterModal({
     const enterFrame = window.requestAnimationFrame(() => setVisible(true));
 
     const focusTimer = window.setTimeout(() => {
-      if (!alreadySubscribed) inputRef.current?.focus();
+      if (!alreadySubscribed && shouldAutofocusModalField()) {
+        inputRef.current?.focus();
+      }
     }, reduced ? 0 : 200);
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    lockBodyScroll();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -80,7 +84,7 @@ export function NewsletterModal({
     return () => {
       window.cancelAnimationFrame(enterFrame);
       window.clearTimeout(focusTimer);
-      document.body.style.overflow = previousOverflow;
+      unlockBodyScroll();
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [onClose, open, prefillEmail]);
@@ -115,7 +119,7 @@ export function NewsletterModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-100 flex items-end justify-center p-4 sm:items-center"
+      className="fixed inset-0 z-100 flex items-center justify-center p-4"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -195,7 +199,7 @@ export function NewsletterModal({
                     if (info) setInfo("");
                   }}
                   placeholder="you@example.com"
-                  className={inputClass}
+                  className={cn(modalInputClass, "h-11")}
                 />
                 {info ? (
                   <p className="text-sm leading-relaxed text-navy-800/70" role="status">

@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChartCrosshair, ChartTooltip } from "@/components/charts/ChartTooltip";
+import {
+  getChartLayout,
+  scaleToPlotY,
+} from "@/components/charts/chart-layout";
 import type { ChartTooltipState } from "@/lib/charts/tooltip";
 import type {
   AcademicChart,
@@ -16,34 +20,17 @@ type EvidenceLineChartProps = {
   showTooltip?: boolean;
 };
 
-const PADDING = { top: 16, right: 16, bottom: 48, left: 56 };
-
-function scaleValue(
-  value: number,
-  min: number,
-  max: number,
-  range: number,
-  offset: number,
-) {
-  if (max === min) return offset + range / 2;
-  return offset + range - ((value - min) / (max - min)) * range;
-}
-
 function buildPath(
   values: number[],
   min: number,
   max: number,
-  plotWidth: number,
-  plotHeight: number,
-  offsetX: number,
-  offsetY: number,
+  layout: ReturnType<typeof getChartLayout>,
+  step: number,
 ) {
-  const step = values.length > 1 ? plotWidth / (values.length - 1) : 0;
-
   return values
     .map((value, index) => {
-      const x = offsetX + index * step;
-      const y = scaleValue(value, min, max, plotHeight, offsetY);
+      const x = layout.plotLeft + index * step;
+      const y = scaleToPlotY(value, min, max, layout);
       return `${index === 0 ? "M" : "L"} ${x} ${y}`;
     })
     .join(" ");
@@ -115,11 +102,12 @@ export function EvidenceLineChart({
 
   const width = size.width;
   const height = size.height;
-  const plotWidth = Math.max(width - PADDING.left - PADDING.right, 0);
-  const plotHeight = Math.max(height - PADDING.top - PADDING.bottom, 0);
+  const layout = getChartLayout(width, height);
   const [yMin, , , yMax] = chart.yTicks;
   const step =
-    chart.categories.length > 1 ? plotWidth / (chart.categories.length - 1) : 0;
+    chart.categories.length > 1
+      ? layout.plotWidth / (chart.categories.length - 1)
+      : 0;
 
   const subjectLabel =
     chart.title.charAt(0) + chart.title.slice(1).toLowerCase();
@@ -159,19 +147,19 @@ export function EvidenceLineChart({
             aria-label={empty ? undefined : `${chart.title} line chart`}
           >
             {chart.yTicks.map((tick) => {
-              const y = scaleValue(tick, yMin, yMax, plotHeight, PADDING.top);
+              const y = scaleToPlotY(tick, yMin, yMax, layout);
               return (
                 <g key={tick}>
                   <line
-                    x1={PADDING.left}
-                    x2={width - PADDING.right}
+                    x1={layout.plotLeft}
+                    x2={layout.plotRight}
                     y1={y}
                     y2={y}
                     stroke="rgba(15,31,61,0.08)"
                     strokeWidth={1}
                   />
                   <text
-                    x={PADDING.left - 8}
+                    x={layout.plotLeft - 8}
                     y={y + 3}
                     textAnchor="end"
                     className="fill-navy-800 font-sans text-[10px]"
@@ -182,10 +170,19 @@ export function EvidenceLineChart({
               );
             })}
 
+            <line
+              x1={layout.plotLeft}
+              x2={layout.plotRight}
+              y1={layout.plotBottom}
+              y2={layout.plotBottom}
+              stroke="rgba(15,31,61,0.14)"
+              strokeWidth={1}
+            />
+
             <text
               x={12}
-              y={height / 2}
-              transform={`rotate(-90 12 ${height / 2})`}
+              y={layout.yAxisLabelY}
+              transform={`rotate(-90 12 ${layout.yAxisLabelY})`}
               textAnchor="middle"
               className="fill-navy-800 text-[9px]"
             >
@@ -193,12 +190,12 @@ export function EvidenceLineChart({
             </text>
 
             {chart.categories.map((category, index) => {
-              const x = PADDING.left + index * step;
+              const x = layout.plotLeft + index * step;
               return (
                 <text
                   key={`${category}-${index}`}
                   x={x}
-                  y={height - 20}
+                  y={layout.tickY}
                   textAnchor="middle"
                   className="fill-navy-800 font-sans text-[10px]"
                 >
@@ -209,24 +206,22 @@ export function EvidenceLineChart({
 
             <text
               x={width / 2}
-              y={height - 4}
+              y={layout.xLabelY}
               textAnchor="middle"
               className="fill-navy-800 text-[9px]"
             >
               {chart.xLabel}
             </text>
 
-            {!empty &&
-              showTooltip &&
-              tooltip && (
-                <ChartCrosshair
-                  x={tooltip.x}
-                  height={height}
-                  top={PADDING.top}
-                  bottom={PADDING.bottom}
-                  visible
-                />
-              )}
+            {!empty && showTooltip && tooltip && (
+              <ChartCrosshair
+                x={tooltip.x}
+                height={height}
+                top={layout.plotTop}
+                bottom={layout.crosshairBottom}
+                visible
+              />
+            )}
 
             {!empty &&
               chart.series.map((series) => {
@@ -234,19 +229,14 @@ export function EvidenceLineChart({
                   series.values,
                   yMin,
                   yMax,
-                  plotWidth,
-                  plotHeight,
-                  PADDING.left,
-                  PADDING.top,
+                  layout,
+                  step,
                 );
                 const markerShape = series.markerShape ?? "circle";
                 const markerSize = markerShape === "circle" ? 8 : 7;
 
                 return (
-                  <g
-                    key={series.label}
-                    opacity={series.opacity ?? 1}
-                  >
+                  <g key={series.label} opacity={series.opacity ?? 1}>
                     <path
                       d={path}
                       fill="none"
@@ -259,14 +249,8 @@ export function EvidenceLineChart({
                     {series.values.map((value, index) => {
                       if (!Number.isFinite(value) || value <= 0) return null;
 
-                      const x = PADDING.left + index * step;
-                      const y = scaleValue(
-                        value,
-                        yMin,
-                        yMax,
-                        plotHeight,
-                        PADDING.top,
-                      );
+                      const x = layout.plotLeft + index * step;
+                      const y = scaleToPlotY(value, yMin, yMax, layout);
                       const pointId = `${series.label}-${index}`;
                       const isActive = activePoint === pointId;
 

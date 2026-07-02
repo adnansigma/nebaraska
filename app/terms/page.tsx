@@ -19,9 +19,9 @@ export default function TermsOfServicePage() {
   const dates = LEGAL_DATES.terms;
 
   return (
-    <div className="flex min-h-screen flex-col overflow-x-clip bg-paper-50">
+    <div className="flex min-h-dvh flex-col overflow-x-clip bg-paper-50">
       <Header />
-      <main className="flex-1 overflow-x-clip bg-paper-50 pt-[90px]">
+      <main className="flex-1 overflow-x-clip bg-paper-50 pt-(--header-height)">
         <PageFrame className="pb-16 sm:pb-20 lg:pb-24">
           <LegalDocumentPage
             title="Terms of Service"
