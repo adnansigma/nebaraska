@@ -3,7 +3,13 @@ import dynamic from 'next/dynamic'
 import { Navbar } from '@/components/Navbar'
 import { ChartSkeleton } from '@/components/ChartSkeleton'
 import { ScreenTimeChart } from '@/components/ScreenTimeChart'
+import HandwritingVsTypewriting from '@/components/handwriting'
 import Image from 'next/image'
+import {
+    PenLine, BookOpen, Eye, Hand, Crosshair, Layers,
+    ChevronLeft, ChevronRight, Activity, TrendingUp,
+} from 'lucide-react'
+import { useState } from 'react'
 
 const Plot = dynamic(
     () => import('react-plotly.js').then(mod => mod.default),
@@ -903,8 +909,7 @@ export default function ChartsPage() {
                     </p>
                 </div>
             </div>
-
-
+            <HandwritingVsTypewriting />
             </main>
             <footer className="mt-12 pb-12 border-t border-gray-200 pt-8 px-4">
                 <div className="max-w-screen-2xl mx-auto text-center">
@@ -914,5 +919,6 @@ export default function ChartsPage() {
                 </div>
             </footer>
         </div>
+
     )
 }
