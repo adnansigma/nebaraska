@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
+    "@supabase/supabase-js": "^2.109.0",
     "@tanstack/react-query": "^5.95.2",
     "@types/react-plotly.js": "^2.6.4",
     "chart.js": "^4.5.1",

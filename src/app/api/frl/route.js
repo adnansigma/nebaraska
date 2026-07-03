@@ -1,23 +1,12 @@
-import pool from '@/lib/db'
+import supabase from '@/lib/db'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
     try {
-        const result = await pool.query(`
-            SELECT
-                agency_name,
-                school_year,
-                pct_frl,
-                count_frl,
-                level,
-                district_id,
-                county_id
-            FROM frl_scores
-            WHERE level IN ('DI', 'SC')
-            ORDER BY level, agency_name, school_year
-        `)
+        const { data, error } = await supabase.rpc('api_get_frl')
+        if (error) throw error
 
-        return NextResponse.json({ frl: result.rows })
+        return NextResponse.json(data)
 
     } catch (error) {
         console.error('FRL DB Error:', error)
