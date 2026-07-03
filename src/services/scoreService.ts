@@ -14,7 +14,42 @@ export interface DashboardBootstrap {
     frlData          : FrlRow[]
 }
 
-export async function fetchDashboardData(): Promise<DashboardBootstrap> {
+// Module-level cache. Survives as long as the page isn't fully reloaded,
+// which covers tab switches, component remounts, navigation, etc.
+let cachedData: DashboardBootstrap | null = null
+let inFlightRequest: Promise<DashboardBootstrap> | null = null
+
+const CACHE_KEY = 'dashboard-bootstrap-v1'
+const CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes, tweak as needed
+
+function readSessionCache(): DashboardBootstrap | null {
+    try {
+        const raw = sessionStorage.getItem(CACHE_KEY)
+        if (!raw) return null
+
+        const { data, savedAt } = JSON.parse(raw)
+        if (Date.now() - savedAt > CACHE_TTL_MS) {
+            sessionStorage.removeItem(CACHE_KEY)
+            return null
+        }
+        return data as DashboardBootstrap
+    } catch {
+        return null
+    }
+}
+
+function writeSessionCache(data: DashboardBootstrap) {
+    try {
+        sessionStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({ data, savedAt: Date.now() })
+        )
+    } catch {
+        // sessionStorage can fail (quota, private mode, etc) - just skip caching
+    }
+}
+
+async function loadDashboardData(): Promise<DashboardBootstrap> {
     const [scores, filters, frlResp]: [AllData, FiltersResponse, { frl: FrlRow[] }] =
         await Promise.all([
             fetch('/api/scores').then(r => {
@@ -48,5 +83,46 @@ export async function fetchDashboardData(): Promise<DashboardBootstrap> {
         schoolsByDistrict: filters.schoolsByDistrict,
         colorMap,
         frlData          : frlResp.frl,
+    }
+}
+
+export async function fetchDashboardData(opts?: { force?: boolean }): Promise<DashboardBootstrap> {
+    const force = opts?.force ?? false
+
+    if (!force) {
+        // 1. In-memory cache (fastest, survives tab switches in the same session)
+        if (cachedData) return cachedData
+
+        // 2. An identical request already in flight - reuse it instead of firing another
+        if (inFlightRequest) return inFlightRequest
+
+        // 3. sessionStorage cache (survives full page reloads within the tab)
+        const fromSession = readSessionCache()
+        if (fromSession) {
+            cachedData = fromSession
+            return fromSession
+        }
+    }
+
+    inFlightRequest = loadDashboardData()
+        .then(data => {
+            cachedData = data
+            writeSessionCache(data)
+            return data
+        })
+        .finally(() => {
+            inFlightRequest = null
+        })
+
+    return inFlightRequest
+}
+
+// Call this if you add a "Refresh data" button, or after the CSV import job finishes
+export function invalidateDashboardCache() {
+    cachedData = null
+    try {
+        sessionStorage.removeItem(CACHE_KEY)
+    } catch {
+        // ignore
     }
 }

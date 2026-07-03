@@ -281,7 +281,6 @@ export default function HandwritingVsTypewriting() {
 
             {/* ── Key takeaway ───────────────────────────────────────── */}
             <div className="rounded-xl bg-[#1a3353] px-6 py-5 mb-5 border-l-4 border-[#4a6fa5]">
-                <p className="font-tw text-[10px] text-[#8aafd4] uppercase tracking-[0.2em] mb-2">The bottom line</p>
                 <p className="font-display text-lg text-white leading-relaxed">
                     Handwriting activates far more of the brain than typing — specifically the regions
                     and wave patterns linked to memory, attention, and learning. The careful, deliberate
